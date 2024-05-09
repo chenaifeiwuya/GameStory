@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1119</width>
-    <height>661</height>
+    <height>707</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -204,7 +204,7 @@
         <string>name</string>
        </property>
        <property name="icon">
-        <iconset resource="Source.qrc">
+        <iconset>
          <normaloff>:/C:/Users/00/Pictures/AA/txfb.jpg</normaloff>:/C:/Users/00/Pictures/AA/txfb.jpg</iconset>
        </property>
        <property name="iconSize">
@@ -411,7 +411,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="images.qrc">
+               <iconset>
                 <normaloff>:/images/myimages/images/search.png</normaloff>:/images/myimages/images/search.png</iconset>
               </property>
               <property name="iconSize">
@@ -443,7 +443,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="images.qrc">
+               <iconset>
                 <normaloff>:/images/myimages/images/addFile.png</normaloff>:/images/myimages/images/addFile.png</iconset>
               </property>
               <property name="iconSize">
@@ -860,7 +860,7 @@
            <x>0</x>
            <y>60</y>
            <width>881</width>
-           <height>511</height>
+           <height>501</height>
           </rect>
          </property>
          <property name="currentIndex">
@@ -876,7 +876,7 @@
              <x>0</x>
              <y>0</y>
              <width>871</width>
-             <height>471</height>
+             <height>481</height>
             </rect>
            </property>
            <property name="frameShape">
@@ -884,7 +884,7 @@
            </property>
            <column>
             <property name="text">
-             <string/>
+             <string>a</string>
             </property>
             <property name="background">
              <color>
@@ -896,12 +896,17 @@
            </column>
            <column>
             <property name="text">
-             <string/>
+             <string>b</string>
             </property>
            </column>
            <column>
             <property name="text">
-             <string/>
+             <string>c</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>d</string>
             </property>
            </column>
           </widget>
@@ -940,7 +945,7 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset resource="images.qrc">
+          <iconset>
            <normaloff>:/images/myimages/images/search.png</normaloff>:/images/myimages/images/search.png</iconset>
          </property>
         </widget>
@@ -989,9 +994,6 @@
    </widget>
   </widget>
  </widget>
- <resources>
-  <include location="images.qrc"/>
-  <include location="Source.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
