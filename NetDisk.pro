@@ -20,18 +20,21 @@ SOURCES += \
     maindialog.cpp \
     mainwindow.cpp \
     mygameitem.cpp \
-    mytablewidgetitem.cpp
+    mytablewidgetitem.cpp \
+    gameintorduce.cpp
 
 HEADERS += \
     ckernel.h \
     maindialog.h \
     mainwindow.h \
     mygameitem.h \
-    mytablewidgetitem.h
+    mytablewidgetitem.h \
+    gameintorduce.h
 
 FORMS += \
     maindialog.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    gameintorduce.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

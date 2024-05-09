@@ -76,6 +76,11 @@ private slots:      //普通槽函数
     void slot_showSpeed();
     //更新传输速度的限制
     void slot_updateLimitSize(int newLimit);
+    //获取推荐游戏请求
+    void slot_getRecommendInfoRq();
+
+    //定时器显示
+    void slot_show_GameInfo();
 
 
 
@@ -92,6 +97,14 @@ private slots:      //普通槽函数
     void slot_getUploadTask(QList<FileInfo> &infoList);
     //加载下载任务
     void slot_getDownloadTask(QList<FileInfo> &infoList);
+
+
+
+
+    //获取服务器推荐游戏的信息
+    void slot_getRecommendGameInfo();
+    void slot_writefolderId_path(int fileid, QString path);
+    QString slot_getPathById(int f_id);   //通过f_id来获得文件夹的绝对路径
 private:
     //登陆之后，初始化数据
     void InitDatabase(int id);
@@ -113,9 +126,8 @@ private slots:   //网络槽函数
     void slot_dealContinueUploadRs(unsigned int lSendIp,char* buf, int nlen);
 
     void slot_dealGetGameStoryInfo(unsigned int lSendIp, char* buf, int nlen);
-
-
-
+    void slot_dealRecommendGameIdP(unsigned lSendIp, char* buf, int nlen);
+    void slot_dealFolderTranslateOver(unsigned lSendIp, char* buf, int nlen);
 
 
 #ifdef USE_SERVER
@@ -134,7 +146,8 @@ public:
     QString m_sysPath;   //默认存储的系统路径（绝对路径） exe同级下 NetDIsk文件夹下
     //key 时间戳  hhmmsszzz  int 21 xxxx xxxx value 文件信息
     std::map<int , FileInfo> m_mapTimestampToFileInfo;
-
+    std::map<int, FileInfo> m_mapRecommendGame;    //推荐游戏的游戏ID对应的游戏信息
+    std::map<int, QString> m_map_id_path;    //用于定时显示文件界面
     PFUN m_netPackMap[_DEF_PACK_COUNT];
     bool m_quit;   //程序退出标志位
 
@@ -143,9 +156,12 @@ public:
 
     //定时器，用于计算文件传输速度
     QTimer timer;
+    QTimer timer_show;   //用于刷新界面
 
     //主动限速大小
     int limitSize;   //限速大小，默认为不限速
+
+
 private:
 
 

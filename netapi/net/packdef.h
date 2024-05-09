@@ -100,7 +100,6 @@ struct FileInfo
 
     FileInfo():fileid(0) , size(0),pFile( nullptr )
       , pos(0) , isPause(0),timestamp(0),secondSize(0){
-
     }
     ~FileInfo(){
 
@@ -335,13 +334,14 @@ struct STRU_DOWNLOAD_FILE_RQ
 struct STRU_DOWNLOAD_FOLDER_RQ
 {
     STRU_DOWNLOAD_FOLDER_RQ():type(_DEF_PACK_DOWNLOAD_FOLDER_RQ)
-      ,userid(0),fileid(0),timestamp(0){
+      ,userid(0),fileid(0),timestamp(0),flag(0){
         memset( dir , 0, sizeof(dir) );
     }
     PackType type;
     int timestamp;//时间戳用于区分不同任务
     int userid; //服务器与时间戳配合,区分不同任务
     int fileid; //文件id
+    int flag;     //通过这个flag来确定当前的具体需求
     char dir[ _MAX_PATH_SIZE ]; //文件所属目录
 
 };
@@ -656,5 +656,27 @@ struct STRU_CONTINUE_UPLOAD_RS
     //char dir[_MAX_PATH_SIZE];
 };
 
+#define _DEF_GET_RECOMMEND_GAME_INFO_RQ  (_DEF_PACK_BASE + 30)
+
+struct STRU_GET_RECOMMEND_GAME_INFO_RQ
+{
+    STRU_GET_RECOMMEND_GAME_INFO_RQ():type(_DEF_GET_RECOMMEND_GAME_INFO_RQ), userid(0){
+    }
+    PackType type;
+    int userid;
+    int f_id;
+};
 
 
+#define _DEF_FOLDER_TRANSLATE_OVER  (_DEF_PACK_BASE + 31)
+
+struct STRU_FOLDER_TRANSLATE_OVER
+{
+    STRU_FOLDER_TRANSLATE_OVER():type(_DEF_FOLDER_TRANSLATE_OVER)
+    {
+
+    }
+    PackType type;
+    int userid;
+    int f_id;
+};

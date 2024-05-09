@@ -21,4 +21,5 @@ void MyTableWidgetItem::slot_setInfo(FileInfo &info)
 
     //勾选框  未打勾
     this->setCheckState(Qt::Unchecked);
+
 }

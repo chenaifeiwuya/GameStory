@@ -13,6 +13,7 @@
 #include <QStringList>
 #include <QInputDialog>
 #include <mygameitem.h>
+#include <gameintorduce.h>
 
 
 
@@ -66,6 +67,7 @@ private slots:
     //game story:
     void slot_deleteAllExploreGameInfo();
     void slot_insertExploreGameInfo(FileInfo &info);
+    bool slot_insertGameInfo(int f_id, QString path);   //参数分别为文件id和文件的绝对路径
 
 
 
@@ -112,6 +114,12 @@ private slots:
 
     void on_pb_hsz_clicked();
 
+    void on_table_explore_clicked(const QModelIndex &index);
+
+    void on_table_explore_itemClicked(QTableWidgetItem *item);
+
+    void on_table_explore_cellClicked(int row, int column);
+
 signals:
     void SIG_uploadFile(QString,QString);    //第一个QString是需要上传的文件的路径， 第二个是希望保存到服务器的哪个目录下
     void SIG_close();
@@ -138,6 +146,8 @@ private:
     QMenu m_menuDownload;
     QMenu m_menuUpload;
 
+
+    std::map<int, myGameItem*> m_map_id_game;
     friend class cKernel;
 
     uint8_t columns;

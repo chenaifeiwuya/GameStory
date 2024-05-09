@@ -640,7 +640,6 @@ void MainWindow::slot_deleteAllExploreGameInfo()
 void MainWindow::slot_insertExploreGameInfo(FileInfo &info)
 {
     //表格插入信息
-    //列：文件  大小  时间  网速 进度  暂停
     //1：新增一行  获取当前行+1  设置行数
     int rows = ui->table_explore->rowCount();   //获取控件当前行数
     //查看当前添加到第几列了，每一列只能添加三个
@@ -689,6 +688,65 @@ void MainWindow::slot_insertExploreGameInfo(FileInfo &info)
     }
         ui->table_upload->setCellWidget(rows,5,button);
         */
+}
+
+
+//参数分别为文件id和绝对路径
+bool MainWindow::slot_insertGameInfo(int f_id, QString path)
+{
+
+    /* int rows = ui->table_explore->rowCount();   //获取控件当前行数
+     if(gameStoryColumns == 3)
+         gameStoryColumns = 0;
+    if(gameStoryColumns == 0)
+             ui->table_explore->setRowCount(rows+1);     //设置行数+1
+        myGameItem *item = new myGameItem;
+        item->pLabel->setText("a");
+        ui->table_explore->setCellWidget(rows,gameStoryColumns,item);
+     gameStoryColumns++;
+     return true;*/
+
+    //根据路径，去找图片的介绍信息等等
+    //QMessageBox::information(this,"info","您已经开始添加文件id和绝对路径了");
+    if(m_map_id_game.count(f_id) > 0)
+    {
+        myGameItem* item = m_map_id_game[f_id];
+        return item->slot_setGameCover(f_id,path);
+    }
+
+    QDir dir(path);
+    QStringList fileList = dir.entryList(QStringList()<<"*.png", QDir::Dirs|QDir::Files);   //获得该路径下的图片，这个图片就是要加载到封面的图片
+
+
+
+    //表格插入信息
+    //1：新增一行  获取当前行+1  设置行数
+    int rows = ui->table_explore->rowCount();   //获取控件当前行数
+    //查看当前添加到第几列了，每一列只能添加三个
+    if(gameStoryColumns==4)
+        gameStoryColumns=0;
+    if(gameStoryColumns == 0)
+    {
+        //说明上一行已经添加满了，需要添加新的行数了
+        ui->table_explore->setRowCount(rows+1);     //设置行数+1
+    }
+    else rows-=1;
+
+
+    //在当前行的当前列添加item
+     //   gameStoryColumns = 0;
+    myGameItem *item = new myGameItem;
+        m_map_id_game[f_id]  = item;
+    item->slot_setGameCover(f_id,path);
+    ui->table_explore->setColumnWidth(gameStoryColumns,200);
+    ui->table_explore->setRowHeight(rows,150);
+    ui->table_explore->setCellWidget(rows,gameStoryColumns,item);
+    item->show();
+    ++gameStoryColumns;
+   // ui->table_explore->resizeColumnsToContents();
+    //ui->table_explore->resizeRowsToContents();
+    return false;
+
 }
 
 
@@ -868,7 +926,6 @@ void MainWindow::on_le_limit_editingFinished()
     Q_EMIT SIG_updateLimitSize(size);
 }
 
-
 void MainWindow::on_pb_store_clicked()
 {
     ui->sw_page->setCurrentWidget(ui->page_story);
@@ -880,3 +937,24 @@ void MainWindow::on_pb_hsz_clicked()
     ui->sw_page->setCurrentWidget(ui->page_rubsh);
 }
 
+
+void MainWindow::on_table_explore_clicked(const QModelIndex &index)    //被点击了
+{
+
+}
+
+void MainWindow::on_table_explore_itemClicked(QTableWidgetItem *item)
+{
+
+
+}
+
+void MainWindow::on_table_explore_cellClicked(int row, int column)
+{
+    myGameItem* gameItem = ui->table_explore->item(row,column);
+    //向服务器发送请求获取该游戏的介绍
+
+    //创建新页面，读取这个游戏的各种介绍信息
+    GameIntorduce* window = new GameIntorduce;
+    window->show();
+}

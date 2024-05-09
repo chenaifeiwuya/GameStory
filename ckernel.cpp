@@ -32,6 +32,7 @@ cKernel::cKernel(QObject *parent) : QObject(parent)
     connect(m_MainWindow,SIGNAL(SIG_uploadFile(QString,QString)),this,SLOT(slot_uploadFile(QString,QString)));
     connect(this, SIGNAL(SIG_updateUploadFileProgress(int,int)), m_MainWindow, SLOT(slot_updateUploadFileProgress(int,int)));
     connect(m_MainWindow,SIGNAL(SIG_downloadFile(int,QString)), this, SLOT(slot_downloadFile(int,QString)));
+    connect(m_MainWindow,SIGNAL(SIG_downloadFolder(int,QString)), this,SLOT(slot_downloadFolder(int,QString)));
     connect(m_MainWindow,SIGNAL(SIG_addFolder(QString,QString)), this, SLOT(slot_addFolder(QString,QString)));
     connect(this,SIGNAL(SIG_updateDownloadFileProgress(int,int)), m_MainWindow, SLOT(slot_updateDownloadFileProgress(int,int)));
     connect(m_MainWindow,SIGNAL(SIG_changeDir(QString)),this,SLOT(slot_changeDir(QString)));
@@ -49,6 +50,11 @@ cKernel::cKernel(QObject *parent) : QObject(parent)
     timer.setInterval(1000);  //间隔为1s
     timer.start();
     limitSize = 0;   //0表示不限速,默认限速大小为不限速
+
+
+    connect(&timer_show,SIGNAL(timeout()),this,SLOT(slot_show_GameInfo()));
+    timer_show.setInterval(2000);  //间隔为1s
+    timer_show.start();
 }
 
 
@@ -173,6 +179,8 @@ void cKernel::setNetPackMap()  //添加协议与函数的映射
     NetMap(_DEF_PACK_FOLDER_HEADER_RQ) = &cKernel::slot_dealFolderHeadRq;
     NetMap(_DEF_PACK_DELETE_FILE_RS) =&cKernel::slot_dealDeleteFileRs;
     NetMap(_DEF_PACK_CONTINUE_UPLOAD_RS) = &cKernel::slot_dealContinueUploadRs;
+    NetMap(_DEF_GET_RECOMMEND_GAME_INFO_RQ) = &cKernel::slot_dealRecommendGameIdP;
+    NetMap(_DEF_FOLDER_TRANSLATE_OVER) = &cKernel::slot_dealFolderTranslateOver;
 }
 
 void cKernel::SendData(char *buffer, int len)
@@ -339,6 +347,8 @@ void cKernel::slot_refreshPageInfo(QString path)
 //获取当前网盘目录
 void cKernel::slot_getCurDirFileList()
 {
+    //首先向服务器发送请求获取推荐的游戏的信息
+
     //向服务器发送获取当前目录文件列表
     STRU_GET_FILE_INFO_RQ rq;
     rq.userid = m_id;
@@ -347,12 +357,15 @@ void cKernel::slot_getCurDirFileList()
     strcpy(rq.dir , strDir.c_str());
 
     SendData((char*)&rq, sizeof(rq));
+
+
 }
 
 //下载文件
 void cKernel::slot_downloadFile(int fileid, QString dir)
 {
     //写请求
+        qDebug()<<__func__;
     STRU_DOWNLOAD_FILE_RQ rq;
     //兼容中文
     std::string strDir = dir.toStdString();
@@ -372,9 +385,26 @@ void cKernel::slot_downloadFile(int fileid, QString dir)
 }
 
 //下载文件夹
-void cKernel::slot_downloadFoder(int, QString)
+void cKernel::slot_downloadFoder(int fileid, QString dir)
 {
-
+    //写请求
+        qDebug()<<__func__;
+    STRU_DOWNLOAD_FOLDER_RQ rq;
+    //兼容中文
+    std::string strDir = dir.toStdString();
+    strcpy(rq.dir , strDir.c_str());
+    rq.fileid = fileid;
+    int timestamp = QDateTime::currentDateTime().toString("hhmmsszzz").toInt();
+    while(m_mapTimestampToFileInfo.count(timestamp) > 0)
+    {
+        timestamp++;
+    }
+    //这里直接将一个空的fileInfo写入map占位,因为如果不先占位而等到服务器回复的话，很容易导致时间戳重复，map中信息被覆盖。
+    FileInfo file;
+    m_mapTimestampToFileInfo[timestamp] = file;
+    rq.timestamp = timestamp;
+    rq.userid = m_id;
+    SendData((char*)&rq, sizeof(rq));
 }
 
 void cKernel::slot_shareFile(QVector<int> fileidArray, QString dir)
@@ -507,6 +537,8 @@ void cKernel::slot_dealLoginRs(uint lSendIp, char *buf, int len)
             InitDatabase(m_id);   //这里传的int参数是SQLite数据库名称  初始化数据库
             m_name=QString(rs->name);
             m_MainDialog->hide();   //隐藏登录页面
+            //首先发送获取推荐的游戏信息的请求（这个请求只包含界面图片，不包含局内演示视频）
+            slot_getRecommendInfoRq();             //获取推荐算法推荐的游戏
             m_MainWindow->show();   //显示登录后的页面
             m_curDir="/";
             slot_getCurDirFileList();
@@ -680,7 +712,7 @@ void cKernel::slot_dealGetFileInfoRs(unsigned int lSendIp, char *buf, int nlen)
 
         //插入到控件中
         m_MainWindow->slot_insertFileInfo(info);
-        m_MainWindow->slot_insertExploreGameInfo(info);
+        //m_MainWindow->slot_insertExploreGameInfo(info);
     }
 }
 
@@ -688,6 +720,8 @@ void cKernel::slot_dealGetFileInfoRs(unsigned int lSendIp, char *buf, int nlen)
 void cKernel::slot_dealFileHeaderRq(unsigned int lSendIp, char *buf, int nlen)
 {
     STRU_FILE_HEADER_RQ * rq = (STRU_FILE_HEADER_RQ *)buf;
+
+
     FileInfo info;
     //默认路径 sysPath（不含最后的'/'）+dir + name
     //dir 可能有很多层 需要循环创建目录
@@ -714,6 +748,8 @@ void cKernel::slot_dealFileHeaderRq(unsigned int lSendIp, char *buf, int nlen)
     info.name = QString::fromStdString(rq->fileName);
 
     info.size = rq->size;
+
+    qDebug()<<"qqqqqqqqq"<<rq->fileid<<"   "<<rq->size;
     info.time = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
     info.timestamp = rq->timestamp;
     info.type = "file";
@@ -738,7 +774,8 @@ void cKernel::slot_dealFileHeaderRq(unsigned int lSendIp, char *buf, int nlen)
     m_mapTimestampToFileInfo[rq->timestamp] = info;
     //保存文件信息到SQLite数据库
     slot_writeDownloadTask(info);
-    //写回复
+
+
     STRU_FILE_HEADER_RS rs;
     rs.fileid = rq->fileid;
     rs.result = 1;
@@ -751,10 +788,12 @@ void cKernel::slot_dealFileHeaderRq(unsigned int lSendIp, char *buf, int nlen)
 
 #include<QThread>
 //处理接收到的文件块(下载)
+std::map<int,int> m_map__;
 void cKernel::slot_dealFileContentRq(unsigned int lSendIP, char *buf, int nlen)
 {
     //拆包
     STRU_FILE_CONTENT_RQ * rq = (STRU_FILE_CONTENT_RQ *)buf;
+
 
     //拿到文件信息结构
     if(m_mapTimestampToFileInfo.count(rq->timestamp) == 0) return;
@@ -772,6 +811,8 @@ void cKernel::slot_dealFileContentRq(unsigned int lSendIP, char *buf, int nlen)
         rs.result = 1;
         info.pos += len;
         info.secondSize += len;
+
+        qDebug()<<info.fileid<<"   "<<rq->fileid<<"  "<<info.pos<<" aaa "<<info.size;
         //更新进度 todo
         Q_EMIT SIG_updateDownloadFileProgress(info.pos , rq->timestamp);
 
@@ -781,6 +822,8 @@ void cKernel::slot_dealFileContentRq(unsigned int lSendIP, char *buf, int nlen)
             //结束  关闭文件 回收
             fclose(info.pFile);
             m_mapTimestampToFileInfo.erase(rq->timestamp);
+
+
         }
         while(info.secondSize >= limitSize && limitSize != 0)
         {
@@ -908,6 +951,7 @@ void cKernel::slot_dealFolderHeadRq(unsigned int lSendIp, char *buf, int nlen)
     QString tmpDir = QString::fromStdString(rq->dir);
     QStringList dirList = tmpDir.split("/");  //分割函数 NetDisk 111
 
+       //写回复
     QString pathsum = m_sysPath;
     for(QString &node: dirList)
     {
@@ -921,9 +965,11 @@ void cKernel::slot_dealFolderHeadRq(unsigned int lSendIp, char *buf, int nlen)
             }
         }
     }
+
     pathsum += "/";
     pathsum += QString::fromStdString(rq->fileName);
-
+    //另外，将f_id对应的文件路径持久化保存到SQLite数据库中
+     slot_writefolderId_path(rq->fileid,pathsum);   //后续便可以直接通过查询数据库得到对应游戏的地址
     QDir dir;
     if(!dir.exists(pathsum)){
         dir.mkdir(pathsum);
@@ -1037,6 +1083,28 @@ void cKernel::slot_updateLimitSize(int newLimit)
     limitSize = newLimit * 1024;
 }
 
+//获取推荐游戏信息的请求
+void cKernel::slot_getRecommendInfoRq()
+{
+    STRU_GET_RECOMMEND_GAME_INFO_RQ rq;
+    rq.userid = m_id;
+
+    SendData((char*)&rq, sizeof(rq));
+
+}
+
+void cKernel::slot_show_GameInfo()
+{
+    for (std::map<int, QString>::iterator it = m_map_id_path.begin(); it != m_map_id_path.end();) {
+            if(m_MainWindow->slot_insertGameInfo(it->first,it->second))
+            {
+                it = m_map_id_path.erase(it);
+            }
+            else  ++it;
+    }
+
+}
+
 
 
 void cKernel::slot_writeUploadTask(FileInfo &info)
@@ -1067,6 +1135,36 @@ void cKernel::slot_writeDownloadTask(FileInfo &info)
                             .arg(info.type)\
                             .arg(info.absolutePath);
     m_sql->UpdateSql(sqlbuf);
+}
+
+
+void cKernel::slot_writefolderId_path(int fileid, QString path)
+{
+        qDebug()<<__func__;
+        //判断是否已存在
+    QStringList lstRes;
+    QString sqlbuf = QString("select f_id from t_folderid_path where f_id = %1;").arg(fileid);
+    bool res=m_sql->SelectSql(sqlbuf,1,lstRes);
+    if(!lstRes.empty())   //如果已经存在了则直接返回
+        return;
+    sqlbuf = QString("insert into t_folderid_path values(%1, '%2');").arg(fileid).arg(path);
+     res=m_sql->UpdateSql(sqlbuf);
+    if(!res)
+    {
+        qDebug()<<"slot_writefolderId_path err";
+    }
+}
+
+QString cKernel::slot_getPathById(int f_id)   //通过f_id来获得文件夹的绝对路径
+{
+        qDebug()<<__func__;
+    QString sqlbuf = QString("select f_absolutePath from t_folderid_path where f_id = %1;").arg(f_id);
+    QStringList lstRes;
+    m_sql->SelectSql(sqlbuf,1,lstRes);
+    QString res;
+    if(lstRes.empty()) return res;   //如果为空则返回
+    //将地址返回
+    return lstRes.front();
 }
 
 void cKernel::slot_deleteUploadTask(FileInfo &info)
@@ -1137,6 +1235,16 @@ void cKernel::slot_getDownloadTask(QList<FileInfo> &infoList)
 
      infoList.push_back(info);
  }
+}
+
+//获取服务器推荐的游戏信息
+void cKernel::slot_getRecommendGameInfo()
+{
+    STRU_GET_RECOMMEND_GAME_INFO_RQ rq;
+    rq.userid = this->m_id;
+
+    SendData((char*)&rq,sizeof(rq));
+
 }
 
 void cKernel::InitDatabase(int id)
@@ -1244,6 +1352,9 @@ void cKernel::InitDatabase(int id)
                 f_absolutePath varchar(260)  \
                 )";
          m_sql->UpdateSql(sqlbuf);
+
+        sqlbuf = "create table t_folderid_path(f_id int, f_absolutePath varchar(260))";
+        m_sql->UpdateSql(sqlbuf);   //创建数据库
     }
 }
 
@@ -1316,6 +1427,33 @@ void cKernel::slot_dealGetGameStoryInfo(unsigned int lSendIp, char *buf, int nle
         m_MainWindow->slot_insertFileInfo(info);
     }
 }
+
+//获得推荐游戏的游戏id
+void cKernel::slot_dealRecommendGameIdP(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_RECOMMEND_GAME_INFO_RQ* rs = (STRU_GET_RECOMMEND_GAME_INFO_RQ*)buf;
+    FileInfo info;
+    m_mapRecommendGame[rs->f_id] = info;   //插入
+
+    //然后下载对应的信息
+    slot_downloadFoder(rs->f_id,"game");
+}
+
+//处理文件夹传输完毕的信息   //这里实际并未传输完毕，只是将信息暂时保存到map中，方便定时器不断刷新界面
+void cKernel::slot_dealFolderTranslateOver(unsigned lSendIp, char *buf, int nlen)
+{
+        qDebug()<<__func__;
+    STRU_FOLDER_TRANSLATE_OVER *rq = (STRU_FOLDER_TRANSLATE_OVER*)buf;
+    if(m_map_id_path.count(rq->f_id) > 0) return;
+    //根据f_id，将对应的游戏信息显示到界面上来
+    //查询数据库
+    QString path = slot_getPathById(rq->f_id);
+    m_map_id_path[rq->f_id] = path;
+    //m_MainWindow->slot_insertGameInfo(rq->f_id,path);
+
+}
+
+
 
 #ifdef USE_SERVER
 void cKernel::slot_dealServerData(uint lSendIP, char *buf, int nlen)
