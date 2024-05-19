@@ -404,7 +404,7 @@ struct STRU_FILE_HEADER_RS
 struct STRU_ADD_FOLDER_RQ
 {
     STRU_ADD_FOLDER_RQ():type(_DEF_PACK_ADD_FOLDER_RQ)
-      ,timestamp(0),userid(0){
+      ,timestamp(0),userid(0),flag(0){
         memset( fileName , 0, sizeof(fileName) );
         memset( dir , 0, sizeof(dir) );
         memset( time , 0, sizeof(time) );
@@ -412,6 +412,7 @@ struct STRU_ADD_FOLDER_RQ
     PackType type;
     int timestamp;
     int userid;
+    int flag;                        //用于表示是游戏的外层文件夹还是文件的内层文件夹,0表示为内层文件夹，1表示为外层文件夹
     char fileName[_MAX_PATH_SIZE];
     char dir[_MAX_PATH_SIZE];//路径
     char time[_MAX_SIZE]; //上传时间
@@ -421,13 +422,15 @@ struct STRU_ADD_FOLDER_RQ
 struct STRU_ADD_FOLDER_RS
 {
     STRU_ADD_FOLDER_RS(): type(_DEF_PACK_ADD_FOLDER_RS)
-     ,timestamp(0) ,userid(0), result(1){
+     ,timestamp(0) ,userid(0), result(1),flag(1){
 
     }
     PackType type;
     int timestamp;
     int userid;
     int result;
+    int fileid;      //创建文件夹的id
+    int flag;   //0表示内层文件夹，1表示外层文件夹
 };
 
 
@@ -672,11 +675,237 @@ struct STRU_GET_RECOMMEND_GAME_INFO_RQ
 
 struct STRU_FOLDER_TRANSLATE_OVER
 {
-    STRU_FOLDER_TRANSLATE_OVER():type(_DEF_FOLDER_TRANSLATE_OVER)
+    STRU_FOLDER_TRANSLATE_OVER():type(_DEF_FOLDER_TRANSLATE_OVER),flag(0)
     {
 
     }
     PackType type;
     int userid;
     int f_id;
+    int flag;
+};
+
+#define _DEF_GET_GAME_INFO_DIR_RQ (_DEF_PACK_BASE + 32)
+struct STRU_GET_GAME_INFO_DIR_RQ
+{
+    STRU_GET_GAME_INFO_DIR_RQ():type(_DEF_GET_GAME_INFO_DIR_RQ),flag(0)
+    {
+
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int flag;       //用于标识不同的情况
+};
+
+
+
+#define _DEF_GET_GAME_EVALUTE_RQ (_DEF_PACK_BASE + 33)   //用于获取游戏评价
+struct STRU_GET_GAME_EVALUTE_RQ
+{
+    STRU_GET_GAME_EVALUTE_RQ():type(_DEF_GET_GAME_EVALUTE_RQ){
+
+
+    }
+    PackType type;
+    int userid;
+    int num;   //当前已有的评论数量
+    int f_id;
+};
+
+
+#define _DEF_GET_GAME_EVALUTE_RS (_DEF_PACK_BASE + 34)   //返回的游戏评价
+
+struct STRU_GET_GAME_EVALUTE_RS
+{
+    STRU_GET_GAME_EVALUTE_RS():type(_DEF_GET_GAME_EVALUTE_RS){
+        memset(userName,0,sizeof(userName));
+        memset(evalute,0,sizeof(evalute));
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int evaluteNum;   //评论数量
+    int point[10];   //分数
+    char userName[10][20];  //对应评论的用户id
+    char evalute[10][100];    //一次性最多可以发送10条评论，每条评论最多100个字节
+};
+
+
+#define _DEF_GET_GAME_FILE_RQ (_DEF_PACK_BASE + 35)   //下载游戏请求
+struct STRU_GET_GAME_FILE_RQ
+{
+    STRU_GET_GAME_FILE_RQ():type(_DEF_GET_GAME_FILE_RQ){
+
+    }
+    PackType type;
+    int userid;
+    int f_id;                       //游戏id
+};
+
+#define _DEF_SEND_EVALUTE_RQ (_DEF_PACK_BASE + 36)
+struct STRU_SEND_EVALUTE_RQ{
+    STRU_SEND_EVALUTE_RQ():type(_DEF_SEND_EVALUTE_RQ){
+        memset(username,0,sizeof(username));
+        memset(evalute,0,sizeof(evalute));
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int point;  //分数
+    char username[20];   //用户昵称
+    char evalute[100];   //评论最多100个字节
+};
+
+#define _DEF_SEND_EVALUTE_RS (_DEF_PACK_BASE + 37)
+struct STRU_SEND_EVALUTE_RS{
+    STRU_SEND_EVALUTE_RS():type(_DEF_SEND_EVALUTE_RS){
+
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int flag;                             //评论是否发表成功？ 若未拥有该游戏，则评论无法发表成功
+};
+
+#define _DEF_UPLOAD_GAME_LABEL_RQ (_DEF_PACK_BASE + 38)      //游戏标签
+struct STRU_UPLOAD_GAME_LABEL_RQ{
+    STRU_UPLOAD_GAME_LABEL_RQ():type(_DEF_UPLOAD_GAME_LABEL_RQ){
+        memset(label,0,sizeof(label));
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int labelNum;           //标签数量
+    int typeNum;
+    char label[10][20];
+};
+
+
+#define _DEF_GAME_ID_RQ (_DEF_PACK_BASE + 39)
+struct STRU_GAME_ID_RQ{
+    STRU_GAME_ID_RQ():type(_DEF_GAME_ID_RQ){    //用于上传游戏后将游戏id传回给用户
+
+    }
+    PackType type;
+    int userid;
+    int f_id;
+};
+
+#define _DEF_GET_GAME_TYPE_RQ (_DEF_PACK_BASE + 40)    //获取游戏类型的请求
+struct STRU_GET_GAME_TYPE_RQ{
+    STRU_GET_GAME_TYPE_RQ():type(_DEF_GET_GAME_TYPE_RQ){
+
+    }
+    PackType type;
+    int userid;
+    int f_id;
+    int labelNum;           //标签数量
+    char label[10][20];
+};
+
+#define _DEF_GET_GAME_DIVIDE_RQ (_DEF_PACK_BASE + 41)   //按照游戏类型请求服务器
+struct STRU_GET_GAME_BY_GAME_TYPE_RQ{
+    STRU_GET_GAME_BY_GAME_TYPE_RQ():type(_DEF_GET_GAME_DIVIDE_RQ){
+
+    }
+    PackType type;
+    int userid;
+    int typeNum;             //类型，用二进制表示
+};
+
+
+#define _DEF_GET_GAME_NAME_RQ (_DEF_PACK_BASE + 42)        //根据游戏名字来搜索游戏
+struct STRU_GET_GAME_BY_NAME_RQ{
+    STRU_GET_GAME_BY_NAME_RQ():type(_DEF_GET_GAME_NAME_RQ){
+        memset(gameName,0,sizeof(gameName));
+    }
+    PackType type;
+    int userid;
+    char gameName[30];   //游戏名称
+};
+
+
+#define _DEF_GET_GAME_NAME_RS (_DEF_PACK_BASE + 43)        //根据游戏名字来搜索游戏
+struct STRU_GET_GAME_BY_NAME_RS{
+    STRU_GET_GAME_BY_NAME_RS():type(_DEF_GET_GAME_NAME_RS){
+
+    }
+    PackType type;
+    int userid;
+    int findRes;
+    int f_id;   //若查找成功，则此为对应游戏id
+    //char gameName[30];   //游戏名称
+};
+
+
+
+
+
+//用于向服务器获取愿望清单
+#define _DEF_GET_GAME_DREAM_RQ (_DEF_PACK_BASE + 44)
+struct STRU_GET_GAME_DREAM_RQ{
+    STRU_GET_GAME_DREAM_RQ():type(_DEF_GET_GAME_DREAM_RQ){
+
+    }
+    PackType type;
+    int userid;
+    int dreamNum;            //dreamNum表示当前客户端已经有多少条愿望了
+};
+
+
+
+#define _DEF_GET_GAME_DREAM_RS (_DEF_PACK_BASE + 45)
+struct STRU_GET_GAME_DREAM_RS{
+    STRU_GET_GAME_DREAM_RS():type(_DEF_GET_GAME_DREAM_RS){
+
+    }
+    PackType type;
+    int userid;
+    char Name[20];   //name
+    char buf[260];
+};
+
+
+
+#define _DEF_SEND_GAME_DREAM_RQ (_DEF_PACK_BASE + 46)
+struct STRU_SEND_GAME_DREAM_RQ{
+    STRU_SEND_GAME_DREAM_RQ():type(_DEF_SEND_GAME_DREAM_RQ){
+
+    }
+    PackType type;
+    int userid;
+    char buf[300];
+};
+
+
+
+#define _DEF_SEND_GAME_DREAM_RS (_DEF_PACK_BASE + 47)
+struct STRU_SEND_GAME_DREAM_RS{
+    STRU_SEND_GAME_DREAM_RS():type(_DEF_SEND_GAME_DREAM_RS){
+
+    }
+    PackType type;
+    int userid;
+    int res;
+};
+
+#define _DEF_SEND_USER_MIND_RQ (_DEF_PACK_BASE + 48)        //用于将玩家心情发送给服务器
+struct STRU_SEND_USER_MIND_RQ{
+    STRU_SEND_USER_MIND_RQ():type(_DEF_SEND_USER_MIND_RQ){
+
+    }
+    PackType type;
+    int userid;
+    int mind;
+};
+
+#define _DEF_SEND_USER_MIND_RS (_DEF_PACK_BASE + 49)        //用于将玩家心情发送给服务器
+struct STRU_SEND_USER_MIND_RS{
+    STRU_SEND_USER_MIND_RS():type(_DEF_SEND_USER_MIND_RS){
+
+    }
+    PackType type;
+    int userid;
+    int success;
 };

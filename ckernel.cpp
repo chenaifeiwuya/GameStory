@@ -2,6 +2,9 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QSettings>
+
+int Dirflag=0;   //用于判断当前是游戏文件的外层文件夹还是内层文件夹
+int DownloadFlag=0;   //用于下载文件夹时判断是外层文件夹还是内层文件夹
 cKernel::cKernel(QObject *parent) : QObject(parent)
 {
 
@@ -44,9 +47,29 @@ cKernel::cKernel(QObject *parent) : QObject(parent)
     connect(m_MainWindow,SIGNAL(SIG_setUploadPause(int,int)), this,SLOT(slot_setUploadPause(int,int)));
     connect(m_MainWindow,SIGNAL(SIG_setDownloadPause(int,int)), this,SLOT(slot_setDownloadPause(int,int)));
     connect(m_MainWindow,SIGNAL(SIG_updateLimitSize(int)),this,SLOT(slot_updateLimitSize(int)));
-
+    connect(m_MainWindow,SIGNAL(SIG_getGameInfoFid(int)),this,SLOT(slot_getGameInfoFid(int)));
 
     connect(&timer,SIGNAL(timeout()),this,SLOT(slot_showSpeed()));
+
+    connect(m_MainWindow,SIGNAL(SIG_getGameType(int)),this,SLOT(slot_getGameTypeRq(int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_downloadGame(int)), this,SLOT(slot_downloadGame(int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_downloadGameInfo(int,QString)),this,SLOT(slot_downloadFoder(int,QString)));
+
+    connect(m_MainWindow,SIGNAL(SIG_Sendcomment(int,QString,int)),this,SLOT(slot_Sendcomment(int,QString,int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_getcommentRq(int, int)),this,SLOT(slot_getcommentRq(int, int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_getGamedivideRq(int)),this,SLOT(slot_getGamedivideRq(int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_SelectGameByName(QString)),this,SLOT(slot_getGameByName(QString)));
+
+    connect(m_MainWindow,SIGNAL(SIG_SendMyDream(QString)), this,SLOT(slot_SendMyDream(QString)));
+
+    connect(m_MainWindow,SIGNAL(SIG_getDream(int)),this,SLOT(slot_dealGetDream(int)));
+
+    connect(m_MainWindow,SIGNAL(SIG_SendUserMind(int)),this,SLOT(slot_dealUserMind(int)));
     timer.setInterval(1000);  //间隔为1s
     timer.start();
     limitSize = 0;   //0表示不限速,默认限速大小为不限速
@@ -181,6 +204,14 @@ void cKernel::setNetPackMap()  //添加协议与函数的映射
     NetMap(_DEF_PACK_CONTINUE_UPLOAD_RS) = &cKernel::slot_dealContinueUploadRs;
     NetMap(_DEF_GET_RECOMMEND_GAME_INFO_RQ) = &cKernel::slot_dealRecommendGameIdP;
     NetMap(_DEF_FOLDER_TRANSLATE_OVER) = &cKernel::slot_dealFolderTranslateOver;
+    NetMap(_DEF_GET_GAME_INFO_DIR_RQ) = &cKernel::slot_dealGameInfoFileId;
+    NetMap(_DEF_GET_GAME_TYPE_RQ) = &cKernel::slot_dealGameTypeRq;
+    NetMap(_DEF_SEND_EVALUTE_RS) = &cKernel::slot_dealPointRs;
+    NetMap(_DEF_GET_GAME_EVALUTE_RS) = &cKernel::slot_dealCommentRs;
+    NetMap(_DEF_GET_GAME_NAME_RS) = &cKernel::slot_dealGetGameInfoByName;
+    NetMap(_DEF_SEND_GAME_DREAM_RS) = &cKernel::slot_dealSendDreamRs;
+    NetMap(_DEF_GET_GAME_DREAM_RS) = &cKernel::slot_dealGetDreamRs;
+    NetMap(_DEF_SEND_USER_MIND_RS) = &cKernel::slot_dealGetMindRs;
 }
 
 void cKernel::SendData(char *buffer, int len)
@@ -305,11 +336,13 @@ void cKernel::slot_uploadFolder(QString path, QString dir)
     QDir dr(path);
      //当前文件夹的处理  addFolder
     qDebug()<<"folder:"<<info.fileName()<<"dir:"<<dir;
+
     slot_addFolder(info.fileName(),dir);
     //获取文件夹下面那一层  所有文件的路径（文件信息）
     QFileInfoList lst = dr.entryInfoList();  //获取路径下所有文件的文件信息列表
     //遍历所有文件
     QString newDir = dir + info.fileName() + "/";
+
     for(int i=0; i< lst.size() ; ++i)
     {
         QFileInfo file = lst.at(i);
@@ -468,6 +501,8 @@ void cKernel::slot_addFolder(QString name, QString dir)
     rq.timestamp = QDateTime::currentDateTime().toString("hhmmsszzz").toInt();
 
     rq.userid = m_id;
+    rq.flag = Dirflag;
+    Dirflag = 0;   //外层文件夹传完后就是内层文件夹了
     SendData((char*)&rq, sizeof(rq));
 
 }
@@ -542,7 +577,7 @@ void cKernel::slot_dealLoginRs(uint lSendIp, char *buf, int len)
             m_MainWindow->show();   //显示登录后的页面
             m_curDir="/";
             slot_getCurDirFileList();
-            slot_getMyShare();
+            //slot_getMyShare();
             m_MainWindow->slot_setName(m_name);
             break;
         default:
@@ -709,6 +744,8 @@ void cKernel::slot_dealGetFileInfoRs(unsigned int lSendIp, char *buf, int nlen)
         info.fileid = rs->fileInfo[i].fileid ;
         info.size = rs->fileInfo[i].size;
         info.time = rs->fileInfo[i].time;
+        QString path = slot_getPathById(rs->fileInfo[i].fileid);
+        info.absolutePath = path;
 
         //插入到控件中
         m_MainWindow->slot_insertFileInfo(info);
@@ -877,6 +914,14 @@ void cKernel::slot_dealAddFolderRs(unsigned int lSendIp, char *buf, int nlen)
 
     //判断是否成功
     if(rs->result != 1) return;
+    if(rs->flag == 1)   //如果是外层文件夹
+    {
+        //开始尝试写入文件标签等信息
+        GameType *gt = new GameType;
+        connect(gt,SIGNAL(SIG_sendGameType(char**,int,int,int)),this,SLOT(slot_getGameType(char**,int,int,int)));
+        gt->setFileId(rs->fileid);
+        gt->show();
+    }
     //先删除原来的  slot_deleteAllFileInfo
     m_MainWindow->slot_deleteAllFileInfo();
     //更新文件列表
@@ -1093,6 +1138,24 @@ void cKernel::slot_getRecommendInfoRq()
 
 }
 
+void cKernel::slot_downloadFoderWithFlag(int fileid, QString dir, int flag)   //dir可以省略
+{
+    STRU_DOWNLOAD_FOLDER_RQ rq;
+    string strDir = dir.toStdString();
+    strcpy(rq.dir , strDir.c_str());
+
+    rq.fileid = fileid;
+    int timestamp = QDateTime::currentDateTime().toString("hhmmsszzz").toInt();
+    while(m_mapTimestampToFileInfo.count(timestamp) > 0){
+        timestamp++;
+    }
+    rq.timestamp = timestamp;
+    rq.userid = m_id;
+    rq.flag = flag;   //标志着下载的是游戏信息文件夹
+
+    SendData((char*)&rq, sizeof(rq));
+}
+
 void cKernel::slot_show_GameInfo()
 {
     for (std::map<int, QString>::iterator it = m_map_id_path.begin(); it != m_map_id_path.end();) {
@@ -1103,6 +1166,124 @@ void cKernel::slot_show_GameInfo()
             else  ++it;
     }
 
+}
+
+void cKernel::slot_getGameInfoFid(int fileid)
+{
+    STRU_GET_GAME_INFO_DIR_RQ rq;
+    rq.f_id = fileid;
+    SendData((char*)&rq,sizeof(rq));
+}
+
+//获取当前上传游戏的游戏类型并传给服务器
+
+
+void cKernel::slot_getGameType(char **buf, int num, int fileid,int typeNum)   //num是游戏类型个数
+{
+    //将游戏类型上传到服务器上
+    STRU_UPLOAD_GAME_LABEL_RQ rq;
+    rq.f_id = fileid;
+    rq.userid = m_id;
+    rq.typeNum = typeNum;
+    rq.labelNum = num;
+    for(int i=0;i<10; i++)
+    {
+        memcpy(rq.label[i],buf[i],20);
+        delete[] buf[i];
+        buf[i]=NULL;
+    }
+    delete[] buf;
+    buf = NULL;
+  //  QString str(rq.label[0]);
+    SendData((char*)&rq,sizeof(rq));
+}
+
+void cKernel::slot_getGameTypeRq(int f_id)
+{
+    //内部游戏介绍则发送获取游戏type的请求
+    STRU_GET_GAME_TYPE_RQ m_rq;
+    m_rq.f_id = f_id;
+    m_rq.userid = m_id;
+    SendData((char*)&m_rq,sizeof(m_rq));
+    return;
+}
+
+//下载游戏请求
+void cKernel::slot_downloadGame(int f_id)
+{
+    STRU_DOWNLOAD_FOLDER_RQ rq;
+    //兼容中文
+   // std::string strDir = dir.toStdString();
+   // strcpy(rq.dir , strDir.c_str());
+    rq.fileid = f_id;
+    int timestamp = QDateTime::currentDateTime().toString("hhmmsszzz").toInt();
+    while(m_mapTimestampToFileInfo.count(timestamp) > 0)
+    {
+        timestamp++;
+    }
+    //这里直接将一个空的fileInfo写入map占位,因为如果不先占位而等到服务器回复的话，很容易导致时间戳重复，map中信息被覆盖。
+    FileInfo file;
+    m_mapTimestampToFileInfo[timestamp] = file;
+    rq.timestamp = timestamp;
+    rq.userid = m_id;
+    rq.flag = 2;
+    SendData((char*)&rq, sizeof(rq));
+
+}
+
+//发表评论
+void cKernel::slot_Sendcomment(int f_id, QString comment,int point)
+{
+    STRU_SEND_EVALUTE_RQ rq;
+    rq.point = point;
+    rq.userid = m_id;
+    rq.f_id = f_id;
+    const char* namebuf = m_name.toStdString().c_str();
+    //memcpy(rq.username,namebuf,m_name.size());
+    strcpy(rq.username,namebuf);
+    const char* buf = comment.toStdString().c_str();
+    strcpy(rq.evalute,buf);
+    //memcpy(rq.evalute,buf,comment.size());
+    SendData((char*)&rq,sizeof(rq));
+}
+
+void cKernel::slot_getcommentRq(int f_id, int num)
+{
+    //发送获取评论的请求
+    STRU_GET_GAME_EVALUTE_RQ rq;
+    rq.userid = m_id;
+    rq.f_id = f_id;
+    rq.num = num;    //当前已有的评论数量
+    SendData((char*)&rq,sizeof(rq));
+}
+
+void cKernel::slot_getGamedivideRq(int type)
+{
+    STRU_GET_GAME_BY_GAME_TYPE_RQ rq;
+    rq.typeNum = type;
+    rq.userid = m_id;
+    SendData((char*)&rq,sizeof(rq));
+}
+
+
+//通过游戏名字来获取游戏信息
+void cKernel::slot_getGameByName(QString gameName)
+{
+    STRU_GET_GAME_BY_NAME_RQ rq;
+    const char* buf = gameName.toStdString().c_str();
+    strcpy(rq.gameName,buf);
+    rq.userid = m_id;
+    SendData((char*)&rq,sizeof(rq));
+
+}
+
+void cKernel::slot_SendMyDream(QString text)
+{
+    STRU_SEND_GAME_DREAM_RQ rq;
+    const char* textBuf=text.toStdString().c_str();
+    strcpy(rq.buf,textBuf);
+    rq.userid = m_id;
+    SendData((char*)&rq,sizeof(rq));
 }
 
 
@@ -1165,6 +1346,22 @@ QString cKernel::slot_getPathById(int f_id)   //通过f_id来获得文件夹的�
     if(lstRes.empty()) return res;   //如果为空则返回
     //将地址返回
     return lstRes.front();
+}
+
+//获取文件名称
+QString cKernel::slot_getFolderNameById(int f_id)
+{
+    qDebug()<<__func__;
+    QString sqlbuf = QString("select f_absolutePath from t_folderid_path where f_id = %1;").arg(f_id);
+    QStringList lstRes;
+    m_sql->SelectSql(sqlbuf,1,lstRes);
+    QString res;
+    if(lstRes.empty()) return res;   //如果为空则返回
+    //将地址返回
+    res = lstRes.front();
+    lstRes.clear();
+    lstRes = res.split("/");
+    return lstRes.back();
 }
 
 void cKernel::slot_deleteUploadTask(FileInfo &info)
@@ -1444,13 +1641,187 @@ void cKernel::slot_dealFolderTranslateOver(unsigned lSendIp, char *buf, int nlen
 {
         qDebug()<<__func__;
     STRU_FOLDER_TRANSLATE_OVER *rq = (STRU_FOLDER_TRANSLATE_OVER*)buf;
-    if(m_map_id_path.count(rq->f_id) > 0) return;
-    //根据f_id，将对应的游戏信息显示到界面上来
-    //查询数据库
-    QString path = slot_getPathById(rq->f_id);
-    m_map_id_path[rq->f_id] = path;
+    if(rq->flag == 0)    //如果是外部界面信息
+    {
+        if(m_map_id_path.count(rq->f_id) > 0) return;
+        //根据f_id，将对应的游戏信息显示到界面上来
+        //查询数据库
+        QString path = slot_getPathById(rq->f_id);
+        m_map_id_path[rq->f_id] = path;
+    }
+    else if(rq->flag == 1)
+    {
+        //内部游戏介绍
+        //这里不用在这里显示，直接用定时器不停地去读取
+
+    }
+    else if(rq->flag == 3)
+    {
+        //如果为3，则表明当前下载的是游戏
+        //首先将游戏添加到仓库中
+    }
+    else if(rq->flag == 4)   //分类查询界面
+    {
+        //将信息添加到分类查询界面
+        QString path = slot_getPathById(rq->f_id);
+        QString name = slot_getFolderNameById(rq->f_id);
+        FileInfo info;
+        info.absolutePath = path;
+        info.fileid = rq->f_id;
+        info.name = name;
+        m_MainWindow->slot_setGamedivide(rq->f_id,path,info);
+    }
+    else if(rq->flag == 5)  //搜索游戏
+    {
+        QString path = slot_getPathById(rq->f_id);
+        m_MainWindow->slot_createGameIntroduce(rq->f_id,path);
+    }
     //m_MainWindow->slot_insertGameInfo(rq->f_id,path);
 
+}
+
+//获取gameInfo的信息
+void cKernel::slot_dealGameInfoFileId(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_GAME_INFO_DIR_RQ *rq = (STRU_GET_GAME_INFO_DIR_RQ*)buf;
+    //对flag进行判断
+    if(rq->flag == 0){
+    //根据f_id下载文件夹
+    slot_downloadFoderWithFlag(rq->f_id,"",1);   //路径可以省略
+    }
+    else if(rq->flag == 4)   //分类查询界面
+    {
+        slot_downloadFoderWithFlag(rq->f_id,"",4);   //路径可以省略
+    }
+}
+
+
+
+//获取游戏的type
+void cKernel::slot_dealGameTypeRq(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_GAME_TYPE_RQ* rq = (STRU_GET_GAME_TYPE_RQ*)buf;
+    QString str;
+    for(int i=0; i<rq->labelNum; i++)
+    {
+        str += QString(rq->label[i]);
+        str += " ";
+    }
+
+    //设置游戏类型
+    m_MainWindow->slot_setGameType(rq->f_id,str);
+}
+
+void cKernel::slot_dealPointRs(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_SEND_EVALUTE_RS* rs = (STRU_SEND_EVALUTE_RS*)buf;
+    m_MainWindow->slot_showCommentRes(rs->f_id,rs->flag);
+}
+
+
+//处理接收到的评论回复
+void cKernel::slot_dealCommentRs(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_GAME_EVALUTE_RS* rs = (STRU_GET_GAME_EVALUTE_RS*)buf;
+    //将这些信息添加到对应的界面上
+    QStringList nameList;
+    QStringList commentList;
+    std::vector<int> pointArr;
+    for(int i=0; i<rs->evaluteNum; i++)
+    {
+        QString str(rs->userName[i]);
+        nameList.push_back(str);
+        str = QString(rs->evalute[i]);
+        commentList.push_back(str);
+
+        pointArr.emplace_back(rs->point[i]);
+    }
+
+    m_MainWindow->slot_setcommentshow(rs->f_id,nameList,commentList,pointArr);
+}
+
+
+//获取搜索游戏的回复
+void cKernel::slot_dealGetGameInfoByName(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_GAME_BY_NAME_RS* rs=(STRU_GET_GAME_BY_NAME_RS*)buf;
+
+    if(rs->findRes == 0)
+    {
+        //没有此游戏
+        QMessageBox::information(m_MainWindow,"提示","暂时还没有收纳您所搜索的游戏哦！",QMessageBox::Ok);
+        return;
+    }
+    else if(rs->findRes == 1)  //找到了
+    {
+        //下载该游戏信息并通知mainWindow显示对应的游戏信息
+        //创建一个GameIntorduce
+        slot_downloadFoderWithFlag(rs->f_id,"",5);
+
+    }
+}
+
+
+//发送愿望的回复
+void cKernel::slot_dealSendDreamRs(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_SEND_GAME_DREAM_RS* rs = (STRU_SEND_GAME_DREAM_RS*)buf;
+    if(rs->res)  //愿望发送成功
+    {
+        QMessageBox::information(m_MainWindow,"提示","您的愿望已发送成功，请静待他实现的那一天吧！",QMessageBox::Ok);
+    }
+    else{   //愿望发送失败
+        QMessageBox::information(m_MainWindow,"提示","啊哦，许愿失败呢，请检查下网络！",QMessageBox::Ok);
+    }
+}
+
+
+//处理服务器返回的愿望
+void cKernel::slot_dealGetDreamRs(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_GET_GAME_DREAM_RS* rs = (STRU_GET_GAME_DREAM_RS*)buf;
+    QString dreamText(rs->buf);
+    QString name(rs->Name);
+    m_MainWindow->slot_setDreamText(name,dreamText);
+
+}
+
+void cKernel::slot_dealGetMindRs(unsigned lSendIp, char *buf, int nlen)
+{
+    STRU_SEND_USER_MIND_RS * rs = (STRU_SEND_USER_MIND_RS*)buf;
+
+    if(rs->success)
+    {
+        //成功
+        QMessageBox::information(m_MainWindow,"提示","您的数据已经成功上传至服务器啦！",QMessageBox::Ok);
+    }
+    else
+    {
+        //失败
+        QMessageBox::information(m_MainWindow,"提示","啊哦，您的数据上传失败了，请检查一下网络链接哦！",QMessageBox::Ok);
+    }
+}
+
+//获取愿望
+void cKernel::slot_dealGetDream(int num)
+{
+     STRU_GET_GAME_DREAM_RQ rq;
+     rq.dreamNum = num;
+     rq.userid = m_id;
+
+     SendData((char*)&rq,sizeof(rq));
+}
+
+
+//处理玩家心情
+void cKernel::slot_dealUserMind(int userMind)
+{
+    //将玩家心情发送给服务器
+    STRU_SEND_USER_MIND_RQ rq;
+    rq.userid = m_id;
+    rq.mind = userMind;
+
+    SendData((char*)&rq,sizeof(rq));
 }
 
 

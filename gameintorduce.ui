@@ -56,7 +56,7 @@
     <rect>
      <x>740</x>
      <y>40</y>
-     <width>51</width>
+     <width>61</width>
      <height>311</height>
     </rect>
    </property>
@@ -101,8 +101,8 @@
     <rect>
      <x>49</x>
      <y>389</y>
-     <width>741</width>
-     <height>541</height>
+     <width>751</width>
+     <height>491</height>
     </rect>
    </property>
    <property name="widgetResizable">
@@ -113,32 +113,138 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>739</width>
-      <height>539</height>
+      <width>749</width>
+      <height>489</height>
      </rect>
     </property>
-    <widget class="QWidget" name="widget" native="true">
-     <property name="geometry">
-      <rect>
-       <x>9</x>
-       <y>9</y>
-       <width>721</width>
-       <height>521</height>
-      </rect>
-     </property>
-     <widget class="QWidget" name="verticalLayoutWidget">
-      <property name="geometry">
-       <rect>
-        <x>9</x>
-        <y>9</y>
-        <width>711</width>
-        <height>501</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="lay_introduce"/>
-     </widget>
-    </widget>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLineEdit" name="lineEdit_2"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pb_Send_2">
+       <property name="text">
+        <string>Send</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>游戏介绍：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_Text_2">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="maximumSize">
+        <size>
+         <width>730</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap>C:/Users/00/Pictures/AA/屏幕截图 2024-05-15 211802.png</pixmap>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>评论：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QWidget" name="wdg_comment" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>60</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>368</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </widget>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>360</y>
+     <width>61</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>游戏标签：</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lb_gametime">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>360</y>
+     <width>701</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pb_getGame">
+   <property name="geometry">
+    <rect>
+     <x>380</x>
+     <y>930</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>获取该游戏</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>900</y>
+     <width>111</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>...加载更多评论...</string>
+   </property>
   </widget>
  </widget>
  <resources/>

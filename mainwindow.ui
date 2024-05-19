@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow{background-image: url(qrc:/images/myimages/images/ysLH.png); backgroud-repeat:no-repeat; backgroud-position:center;}</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="wdg_left" native="true">
     <property name="enabled">
@@ -163,7 +166,7 @@
         </size>
        </property>
        <property name="text">
-        <string>回收站</string>
+        <string>情感设置</string>
        </property>
       </widget>
      </item>
@@ -251,7 +254,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="page_file">
         <property name="minimumSize">
@@ -477,6 +480,9 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="styleSheet">
+            <string notr="true">QMainWindow{backgroud-image:usrl(qrc:/images/myimages/images/ysLH.png)}</string>
+           </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
              <widget class="QTableWidget" name="table_file">
@@ -517,17 +523,17 @@
               </column>
               <column>
                <property name="text">
+                <string>游戏</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
                 <string>上次游玩时间</string>
                </property>
               </column>
               <column>
                <property name="text">
                 <string>启动</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string/>
                </property>
               </column>
              </widget>
@@ -825,26 +831,6 @@
                  <string>游戏名</string>
                 </property>
                </column>
-               <column>
-                <property name="text">
-                 <string>大小</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>愿望寄语</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>分享码</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string/>
-                </property>
-               </column>
               </widget>
              </item>
             </layout>
@@ -911,15 +897,204 @@
            </column>
           </widget>
          </widget>
-         <widget class="QWidget" name="tab_2">
+         <widget class="QWidget" name="gameDivide">
           <attribute name="title">
            <string>浏览</string>
           </attribute>
-         </widget>
-         <widget class="QWidget" name="tab_3">
-          <attribute name="title">
-           <string>新闻</string>
-          </attribute>
+          <widget class="QWidget" name="widget_2" native="true">
+           <property name="geometry">
+            <rect>
+             <x>-1</x>
+             <y>9</y>
+             <width>861</width>
+             <height>461</height>
+            </rect>
+           </property>
+           <widget class="QTableWidget" name="tab_gameDivide">
+            <property name="geometry">
+             <rect>
+              <x>5</x>
+              <y>101</y>
+              <width>851</width>
+              <height>361</height>
+             </rect>
+            </property>
+            <column>
+             <property name="text">
+              <string>游戏名</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>游戏</string>
+             </property>
+            </column>
+           </widget>
+           <widget class="QPushButton" name="pushButton_17">
+            <property name="geometry">
+             <rect>
+              <x>790</x>
+              <y>70</y>
+              <width>51</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>:/images/myimages/images/start.png</normaloff>:/images/myimages/images/start.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>100</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+           <widget class="QWidget" name="layoutWidget">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>10</y>
+              <width>644</width>
+              <height>25</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QPushButton" name="pushButton_2">
+               <property name="text">
+                <string>角色扮演</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_3">
+               <property name="text">
+                <string>动作射击</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_4">
+               <property name="text">
+                <string>模拟经营</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_5">
+               <property name="text">
+                <string>休闲益智</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_6">
+               <property name="text">
+                <string>棋牌桌游</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_7">
+               <property name="text">
+                <string>音乐舞蹈</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_8">
+               <property name="text">
+                <string>战争策略</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_9">
+               <property name="text">
+                <string>体育竞技</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="layoutWidget">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>40</y>
+              <width>401</width>
+              <height>25</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QPushButton" name="pushButton_10">
+               <property name="text">
+                <string>单机</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_11">
+               <property name="text">
+                <string>多人合作</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_12">
+               <property name="text">
+                <string>多人对抗</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_13">
+               <property name="text">
+                <string>线上多人</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_14">
+               <property name="text">
+                <string>线下多人</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="layoutWidget">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>70</y>
+              <width>158</width>
+              <height>25</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QPushButton" name="pushButton_15">
+               <property name="text">
+                <string>男生</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_16">
+               <property name="text">
+                <string>女生</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </widget>
          </widget>
         </widget>
         <widget class="QLineEdit" name="lineEdit">
@@ -950,31 +1125,7 @@
          </property>
         </widget>
        </widget>
-       <widget class="QWidget" name="page_rubsh">
-        <widget class="QTabWidget" name="tab_6">
-         <property name="geometry">
-          <rect>
-           <x>40</x>
-           <y>0</y>
-           <width>831</width>
-           <height>521</height>
-          </rect>
-         </property>
-         <property name="currentIndex">
-          <number>1</number>
-         </property>
-         <widget class="QWidget" name="tab_4">
-          <attribute name="title">
-           <string>已卸载</string>
-          </attribute>
-         </widget>
-         <widget class="QWidget" name="tab_5">
-          <attribute name="title">
-           <string>Tab 2</string>
-          </attribute>
-         </widget>
-        </widget>
-       </widget>
+       <widget class="QWidget" name="page_rubsh"/>
       </widget>
      </item>
     </layout>
@@ -990,6 +1141,42 @@
     </property>
     <property name="text">
      <string>...</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_18">
+    <property name="geometry">
+     <rect>
+      <x>990</x>
+      <y>620</y>
+      <width>111</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>加载更多愿望</string>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="text_Dream">
+    <property name="geometry">
+     <rect>
+      <x>240</x>
+      <y>620</y>
+      <width>731</width>
+      <height>71</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pb_sendDream">
+    <property name="geometry">
+     <rect>
+      <x>1000</x>
+      <y>660</y>
+      <width>88</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>发表愿望</string>
     </property>
    </widget>
   </widget>

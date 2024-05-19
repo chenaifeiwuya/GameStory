@@ -4,9 +4,11 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    dreamNum(0)
 {
 
+    memset(pbCheck,0,sizeof(pbCheck));
     ui->setupUi(this);
     //默认文件分页
     ui->sw_page->setCurrentWidget(ui->page_file);
@@ -97,7 +99,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
 
+    setPushbuttonStyle();
 
+    ui->pushButton_18->hide();
+    ui->pb_sendDream->hide();
+    ui->text_Dream->hide();
 
 
 }
@@ -173,6 +179,7 @@ void MainWindow::slot_uploadFile(bool flag)
 }
 
 //上传文件夹
+extern int Dirflag;
 void MainWindow::slot_uploadFolder(bool flag)
 {
     qDebug()<<__func__;
@@ -183,6 +190,7 @@ void MainWindow::slot_uploadFolder(bool flag)
     //过滤 是否正在传 todo
 
     //发信号  上传什么路径的文件夹，到什么目录下面
+    Dirflag = 1;
     Q_EMIT SIG_uploadFolder(path, ui->lb_path->text());
 
 }
@@ -337,6 +345,7 @@ void MainWindow::slot_deleteUploadFileByRow(int row)
     return;
 }
 
+//获取文件列表然后插入到界面上
 void MainWindow::slot_insertFileInfo(FileInfo &info)
 {
     //列：文件名  大小 时间  上传完成
@@ -349,8 +358,18 @@ void MainWindow::slot_insertFileInfo(FileInfo &info)
     item0->slot_setInfo(info);
     ui->table_file->setItem(rows, 0, item0);
 
-    QTableWidgetItem *item1=new QTableWidgetItem(FileInfo::getSize(info.size));
-    ui->table_file->setItem(rows, 1, item1);
+    myGameItem* Gameitem =new myGameItem(1);   //使用带参构造函数
+    Gameitem->slot_setInfo(info);
+    Gameitem->startLoadImg();    //开始尝试加载图片
+    emit SIG_downloadGameInfo(info.fileid,"");   //QString 可以为空
+    //发送信号获取该游戏的游戏信息
+    ui->table_file->setCellWidget(rows,1,Gameitem);
+    ui->table_file->resizeColumnsToContents();
+    ui->table_file->resizeRowsToContents();
+
+
+     myGameItem* item1 =new myGameItem(2);   //使用带参构造函数
+    ui->table_file->setCellWidget(rows, 3, item1);
 
     QTableWidgetItem *item2=new QTableWidgetItem(info.time);
     ui->table_file->setItem(rows, 2, item2);
@@ -749,17 +768,283 @@ bool MainWindow::slot_insertGameInfo(int f_id, QString path)
 
 }
 
+void MainWindow::slot_setGameType(int f_id, QString type)
+{
+    //根据f_id找到窗口
+    if(m_map_id_gameInfo.count(f_id) > 0)
+    {
+        GameIntorduce* widget = m_map_id_gameInfo[f_id];
+        widget->setGameType(type);
+    }
+}
+
+void MainWindow::slot_downloadGame(int f_id)
+{
+    emit SIG_downloadGame(f_id);
+}
+
+void MainWindow::slot_Sendcomment(int f_id, QString content, int point)
+{
+    emit SIG_Sendcomment(f_id,content,point);
+}
+
+void MainWindow::slot_showCommentRes(int f_id, int flag)
+{
+    //首先根据f_id找到对应的窗口
+    if(m_map_id_gameInfo.count(f_id) > 0)
+    {
+        switch(flag)
+        {
+        case 0:
+            QMessageBox::information(m_map_id_gameInfo[f_id],"res","评论失败，您尚未拥有该游戏!",QMessageBox::Ok);
+            break;
+        case 1:
+            QMessageBox::information(m_map_id_gameInfo[f_id],"res","评论成功!",QMessageBox::Ok);
+            break;
+        case 2:
+            QMessageBox::information(m_map_id_gameInfo[f_id],"res","评论失败，您已评论过该游戏，请勿重复评论!",QMessageBox::Ok);
+            break;
+
+        }
+    }
+}
+
+void MainWindow::slot_getcommentRq(int f_id,int num)
+{
+    emit SIG_getcommentRq(f_id, num);
+}
+
+//设置评论显示
+
+void MainWindow::slot_setcommentshow(int f_id,QStringList& nameList, QStringList& commentList, std::vector<int>& point)
+{
+    //首先通过id找到对应的introduce窗口
+    if(m_map_id_gameInfo.count(f_id) > 0)
+    {
+        GameIntorduce* ite = m_map_id_gameInfo[f_id];
+        if(ite != NULL)
+        {
+            ite->slot_setcommentShow(f_id,nameList,commentList,point);
+        }
+    }
+    //窗口不存在则直接返回
+    return;
+}
+
+void MainWindow::setPushbuttonStyle()
+{
+    //设置按钮样式
+    ui->pushButton_2->setCheckable(true);  //设置为可选中
+    ui->pushButton_2->setChecked(false);   //初始状态为未选中
+    ui->pushButton_2->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_3->setCheckable(true);  //设置为可选中
+    ui->pushButton_3->setChecked(false);   //初始状态为未选中
+    ui->pushButton_3->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_4->setCheckable(true);  //设置为可选中
+    ui->pushButton_4->setChecked(false);   //初始状态为未选中
+    ui->pushButton_4->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_5->setCheckable(true);  //设置为可选中
+    ui->pushButton_5->setChecked(false);   //初始状态为未选中
+    ui->pushButton_5->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_6->setCheckable(true);  //设置为可选中
+    ui->pushButton_6->setChecked(false);   //初始状态为未选中
+    ui->pushButton_6->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_7->setCheckable(true);  //设置为可选中
+    ui->pushButton_7->setChecked(false);   //初始状态为未选中
+    ui->pushButton_7->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_8->setCheckable(true);  //设置为可选中
+    ui->pushButton_8->setChecked(false);   //初始状态为未选中
+    ui->pushButton_8->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_9->setCheckable(true);  //设置为可选中
+    ui->pushButton_9->setChecked(false);   //初始状态为未选中
+    ui->pushButton_9->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_10->setCheckable(true);  //设置为可选中
+    ui->pushButton_10->setChecked(false);   //初始状态为未选中
+    ui->pushButton_10->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_11->setCheckable(true);  //设置为可选中
+    ui->pushButton_11->setChecked(false);   //初始状态为未选中
+    ui->pushButton_11->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_12->setCheckable(true);  //设置为可选中
+    ui->pushButton_12->setChecked(false);   //初始状态为未选中
+    ui->pushButton_12->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_13->setCheckable(true);  //设置为可选中
+    ui->pushButton_13->setChecked(false);   //初始状态为未选中
+    ui->pushButton_13->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_14->setCheckable(true);  //设置为可选中
+    ui->pushButton_14->setChecked(false);   //初始状态为未选中
+    ui->pushButton_14->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    ui->pushButton_15->setCheckable(true);  //设置为可选中
+    ui->pushButton_15->setChecked(false);   //初始状态为未选中
+    ui->pushButton_15->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+    //设置按钮样式
+    ui->pushButton_16->setCheckable(true);  //设置为可选中
+    ui->pushButton_16->setChecked(false);   //初始状态为未选中
+    ui->pushButton_16->setStyleSheet("QPushButton { background-color: #ffffff; }"
+                              "QPushButton:checked { background-color: #808080; }");
+
+    //设置按钮样式
+    //ui->pushButton_17->setCheckable(true);  //设置为可选中
+   // ui->pushButton_17->setChecked(false);   //初始状态为未选中
+  //  ui->pushButton_17->setStyleSheet("QPushButton { background-color: #ffffff; }"
+   //                           "QPushButton:checked { background-color: #808080; }");
+}
+
+
+void MainWindow::slot_removeIntroduce(int f_id)
+{
+    if(m_map_id_gameInfo.count(f_id) > 0)
+    {
+        //移除
+        m_map_id_gameInfo[f_id] = NULL;
+        m_map_id_gameInfo.erase(f_id);
+    }
+    return;
+}
+
+//设置游戏 分类界面的游戏信息
+void MainWindow::slot_setGamedivide(int f_id, QString path,FileInfo& info)
+{
+    //列：文件名  大小 时间  上传完成
+    //表格插入信息
+    //1：新增一行  获取当前行+1  设置行数
+    //FileInfo info;
+    info.fileid = f_id;
+    info.absolutePath = path;
+    int rows = ui->tab_gameDivide->rowCount();
+    ui->tab_gameDivide->setRowCount(rows +1);
+    //2：设置这一行的每一列控件（添加对象）
+    MyTableWidgetItem *item0=new MyTableWidgetItem;
+    item0->slot_setInfo(info);
+    ui->tab_gameDivide->setItem(rows, 0, item0);
+
+    myGameItem* Gameitem =new myGameItem(1);   //使用带参构造函数
+
+    Gameitem->slot_setInfo(info);
+    Gameitem->startLoadImg();    //开始尝试加载图片
+    emit SIG_downloadGameInfo(info.fileid,"");   //QString 可以为空
+    //发送信号获取该游戏的游戏信息
+    ui->tab_gameDivide->setCellWidget(rows,1,Gameitem);
+    ui->tab_gameDivide->resizeColumnsToContents();
+    ui->tab_gameDivide->resizeRowsToContents();
+
+
+    QTableWidgetItem *item1=new QTableWidgetItem(FileInfo::getSize(info.size));
+    ui->tab_gameDivide->setItem(rows, 3, item1);
+
+    QTableWidgetItem *item2=new QTableWidgetItem(info.time);
+    ui->tab_gameDivide->setItem(rows, 2, item2);
+}
+
+
+//
+void MainWindow::slot_createGameIntroduce(int fileid, QString path)
+{
+    //创建新页面，读取这个游戏的各种介绍信息
+    GameIntorduce* window = new GameIntorduce;
+    connect(window,SIGNAL(SIG_downloadGame(int)), this, SLOT(slot_downloadGame(int)));
+    connect(window,SIGNAL(SIG_Sendcomment(int,QString,int)),this,SLOT(slot_Sendcomment(int,QString,int)));
+    connect(window,SIGNAL(SIG_getcommentRq(int, int)),this,SLOT(slot_getcommentRq(int,int)));
+    connect(window,SIGNAL(SIG_removeIntroduce(int)),this,SLOT(slot_removeIntroduce(int)));
+    window->setGameId(fileid);
+    window->setGamePath(path);
+    if(m_map_id_gameInfo.count(fileid) == 0){    //没有下载过时才需要重新下载
+        if(m_gameInfo.count(fileid) == 0){
+            emit SIG_getGameInfoFid(fileid);
+            m_gameInfo.insert(fileid);
+        }
+    }
+    m_map_id_gameInfo[fileid] = window;
+    emit SIG_getGameType(fileid);
+    window->show();
+}
+
+void MainWindow::slot_setDreamText(QString name,QString dreamText)
+{
+    //将dream显示到界面上
+    static int pixmapId=1;
+    static int m_height;
+    comment* newComment = new comment;
+    newComment->setPixmapPath(pixmapId);
+    pixmapId ++;
+    newComment->setDream(name,dreamText);
+    m_height += newComment->height();
+
+    //ui->table_share->setFixedHeight(m_height);
+    //comment_layout->addWidget(newComment);
+    int row=ui->table_share->rowCount();
+    ui->table_share->setRowCount(row +1);
+    ui->table_share->setCellWidget(row,0,newComment);
+    ui->table_share->resizeColumnsToContents();
+    ui->table_share->resizeRowsToContents();
+
+    newComment->show();
+    dreamNum++;
+
+
+}
+
+void MainWindow::slot_sendUserMind(int mind)
+{
+    emit SIG_SendUserMind(mind);
+}
+
 
 
 void MainWindow::on_pb_file_clicked()
 {
     ui->sw_page->setCurrentIndex(0);   //设置当前页面为文件页面
+    ui->pushButton_18->hide();
+    ui->pb_sendDream->hide();
+    ui->text_Dream->hide();
 }
 
 
 void MainWindow::on_pb_tranmit_clicked()
 {
     ui->sw_page->setCurrentIndex(1);   //设置当前页面为传输页面
+    ui->pushButton_18->hide();
+    ui->pb_sendDream->hide();
+    ui->text_Dream->hide();
 }
 
 
@@ -768,12 +1053,35 @@ void MainWindow::on_pb_tranmit_clicked()
 //左键单击选项
 void MainWindow::on_table_file_cellClicked(int row, int column)  //实现选中行的时候切换前面的勾选空间的状态
 {
+
     //切换勾选和未勾选状态
-    MyTableWidgetItem* item0=(MyTableWidgetItem*)ui->table_file->item(row,0);
-    if(item0->checkState() == Qt::Checked)
-        item0->setCheckState(Qt::Unchecked);
-    else
-        item0->setCheckState(Qt::Checked);
+    if(column == 0){
+        MyTableWidgetItem* item0=(MyTableWidgetItem*)ui->table_file->item(row,0);
+        if(item0->checkState() == Qt::Checked)
+            item0->setCheckState(Qt::Unchecked);
+        else
+            item0->setCheckState(Qt::Checked);
+    }
+    else if(column == 3){   //启动按钮
+        //打开exe所在的文件夹然后启动
+        MyTableWidgetItem* item0=(MyTableWidgetItem*)ui->table_file->item(row,0);
+        QString path = item0->m_info.absolutePath;
+        path.replace("/","\\");
+        QProcess *process = new QProcess(this);
+        QString program = "\""+path+"\\GAME\\game.exe"+"\"";// 替换为你的exe文件路径
+        //QString program = QString("\"C:\\Users\\00\\Desktop\\GA ME\\game.exe\"");
+        //QStringList command; // 如果需要传递参数，可以添加到这里
+       // command << "\"" + path + "\"";
+        //connect(process, &QProcess::readyReadStandardOutput, this, &YourClass::readStandardOutput);
+        //connect(process, &QProcess::readyReadStandardError, this, &YourClass::readStandardError);
+        //connect(process, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
+         //       this, &YourClass::onFinished);
+
+        process->startDetached(program);
+        QDir::setCurrent(QApplication::applicationDirPath());
+
+    }
+
 }
 
 //右键单击选项
@@ -865,7 +1173,7 @@ void MainWindow::on_table_file_cellDoubleClicked(int row, int column)
 {
     //首先拿到双击的那行的文件名字
     MyTableWidgetItem* item0 = (MyTableWidgetItem*)ui->table_file->item(row,0);
-
+/*
     //判断是不是文件夹， 是文件夹可以跳转（是文件考虑打开文件todo）
     if(item0->m_info.type != "file"){
         //是文件夹  路径 拼接
@@ -875,7 +1183,28 @@ void MainWindow::on_table_file_cellDoubleClicked(int row, int column)
        // ui->lb_path->adjustSize();
         //发送信号 -> 更新当前的目录 -> 刷新文件列表
         Q_EMIT SIG_changeDir(dir);
+    }*/
+
+    //双击之后进入游戏界面
+    //向服务器发送请求获取该游戏的介绍
+
+    //创建新页面，读取这个游戏的各种介绍信息
+    GameIntorduce* window = new GameIntorduce;
+    connect(window,SIGNAL(SIG_downloadGame(int)), this, SLOT(slot_downloadGame(int)));
+    connect(window,SIGNAL(SIG_Sendcomment(int,QString,int)),this,SLOT(slot_Sendcomment(int,QString,int)));
+    connect(window,SIGNAL(SIG_getcommentRq(int, int)),this,SLOT(slot_getcommentRq(int,int)));
+    connect(window,SIGNAL(SIG_removeIntroduce(int)),this,SLOT(slot_removeIntroduce(int)));
+    window->setGameId(item0->m_info.fileid);
+    window->setGamePath(item0->m_info.absolutePath);
+    if(m_map_id_gameInfo.count(item0->m_info.fileid) == 0){    //没有下载过时才需要重新下载
+        if(m_gameInfo.count(item0->m_info.fileid) == 0){
+            emit SIG_getGameInfoFid(item0->m_info.fileid);
+            m_gameInfo.insert(item0->m_info.fileid);
+        }
     }
+    m_map_id_gameInfo[item0->m_info.fileid] = window;
+    emit SIG_getGameType(item0->m_info.fileid);
+    window->show();
 }
 
 //返回上一级目录的按钮
@@ -903,6 +1232,9 @@ void MainWindow::on_pb_prev_clicked()
 void MainWindow::on_pb_share_clicked()
 {
     ui->sw_page->setCurrentWidget(ui->page_share);
+    ui->pushButton_18->show();
+    ui->pb_sendDream->show();
+    ui->text_Dream->show();
 }
 
 
@@ -929,12 +1261,28 @@ void MainWindow::on_le_limit_editingFinished()
 void MainWindow::on_pb_store_clicked()
 {
     ui->sw_page->setCurrentWidget(ui->page_story);
+    ui->pushButton_18->hide();
+    ui->pb_sendDream->hide();
+    ui->text_Dream->hide();
 }
 
 
+#include "cmind.h"
+
 void MainWindow::on_pb_hsz_clicked()
 {
-    ui->sw_page->setCurrentWidget(ui->page_rubsh);
+    /*
+     * ui->sw_page->setCurrentWidget(ui->page_rubsh);
+    ui->pushButton_18->hide();
+    ui->pb_sendDream->hide();
+    ui->text_Dream->hide();
+    */
+
+
+    //用于设置新界面用以设置用户情感
+    CMind* m_mind = new CMind;
+    connect(m_mind,SIGNAL(SIG_sendUserMind(int)),this,SLOT(slot_sendUserMind(int)));
+    m_mind->show();
 }
 
 
@@ -946,15 +1294,201 @@ void MainWindow::on_table_explore_clicked(const QModelIndex &index)    //被点�
 void MainWindow::on_table_explore_itemClicked(QTableWidgetItem *item)
 {
 
-
 }
 
 void MainWindow::on_table_explore_cellClicked(int row, int column)
 {
-    myGameItem* gameItem = ui->table_explore->item(row,column);
+    myGameItem* gameItem =(myGameItem*) ui->table_explore->cellWidget(row,column);
     //向服务器发送请求获取该游戏的介绍
 
     //创建新页面，读取这个游戏的各种介绍信息
     GameIntorduce* window = new GameIntorduce;
+    connect(window,SIGNAL(SIG_downloadGame(int)), this, SLOT(slot_downloadGame(int)));
+    connect(window,SIGNAL(SIG_Sendcomment(int,QString,int)),this,SLOT(slot_Sendcomment(int,QString,int)));
+    connect(window,SIGNAL(SIG_getcommentRq(int,int)),this,SLOT(slot_getcommentRq(int,int)));
+        connect(window,SIGNAL(SIG_removeIntroduce(int)),this,SLOT(slot_removeIntroduce(int)));
+    window->setGameId(gameItem->m_info.fileid);
+    window->setGamePath(gameItem->path);
+    if(m_map_id_gameInfo.count(gameItem->m_info.fileid) == 0){    //没有下载过时才需要重新下载
+        if(m_gameInfo.count(gameItem->m_info.fileid) == 0){
+            emit SIG_getGameInfoFid(gameItem->m_info.fileid);
+            m_gameInfo.insert(gameItem->m_info.fileid);
+        }
+    }
+    m_map_id_gameInfo[gameItem->m_info.fileid] = window;
+    emit SIG_getGameType(gameItem->m_info.fileid);
     window->show();
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    //获取当前状态
+    /*if(pbCheck[2])
+    {
+        ui->pushButton_2->setChecked(false);
+    }
+    else{
+        ui->pushButton_2->setChecked(true);
+
+    }*/
+     pbCheck[2] = !pbCheck[2];
+}
+
+void MainWindow::on_pushButton_3_clicked()
+{
+    pbCheck[3] = !pbCheck[3];
+}
+
+void MainWindow::on_pushButton_4_clicked()
+{
+    pbCheck[4] = !pbCheck[4];
+}
+
+void MainWindow::on_pushButton_5_clicked()
+{
+    pbCheck[5] = !pbCheck[5];
+}
+
+void MainWindow::on_pushButton_6_clicked()
+{
+    pbCheck[6] = !pbCheck[6];
+}
+
+
+void MainWindow::on_pushButton_7_clicked()
+{
+    pbCheck[7] = !pbCheck[7];
+}
+
+void MainWindow::on_pushButton_8_clicked()
+{
+    pbCheck[8] = !pbCheck[8];
+}
+
+void MainWindow::on_pushButton_9_clicked()
+{
+    pbCheck[9] = !pbCheck[9];
+}
+
+void MainWindow::on_pushButton_10_clicked()
+{
+    pbCheck[10] = !pbCheck[10];
+}
+
+void MainWindow::on_pushButton_11_clicked()
+{
+    pbCheck[11] = !pbCheck[11];
+}
+
+void MainWindow::on_pushButton_12_clicked()
+{
+    pbCheck[12] = !pbCheck[12];
+}
+
+void MainWindow::on_pushButton_13_clicked()
+{
+    pbCheck[13] = !pbCheck[13];
+}
+
+void MainWindow::on_pushButton_14_clicked()
+{
+    pbCheck[14] = !pbCheck[14];
+}
+
+void MainWindow::on_pushButton_15_clicked()
+{
+    pbCheck[15] = !pbCheck[15];
+}
+
+void MainWindow::on_pushButton_16_clicked()
+{
+    pbCheck[16] = !pbCheck[16];
+}
+
+void MainWindow::on_pushButton_17_clicked()
+{
+    //pbCheck[17] = !pbCheck[3];
+    //先将原有数据清空
+    int rows = ui->tab_gameDivide->rowCount();
+    for(int i=rows-1;i>=0;i--)
+    {
+        ui->tab_gameDivide->removeRow(i);
+    }
+    //发送数据向服务器请求对应的数据
+    unsigned int num = 0x01<<2;
+    int res=0;
+    for(int i=2; i<17; i++)
+    {
+        if(pbCheck[i])
+        {
+            res |= num;
+        }
+        num = num<<1;
+    }
+    emit SIG_getGamedivideRq(res);
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+    //搜索游戏，显示出游戏窗口
+    QString gameName = ui->lineEdit->text();
+    emit SIG_SelectGameByName(gameName);
+
+}
+
+void MainWindow::on_tab_gameDivide_cellDoubleClicked(int row, int column)
+{
+    //首先拿到双击的那行的文件名字
+    MyTableWidgetItem* item0 = (MyTableWidgetItem*)ui->table_file->item(row,0);
+/*
+    //判断是不是文件夹， 是文件夹可以跳转（是文件考虑打开文件todo）
+    if(item0->m_info.type != "file"){
+        //是文件夹  路径 拼接
+        QString dir = ui->lb_path->text() + item0->m_info.name + "/";
+        //设置路径 lb_path ->text
+        ui->lb_path->setText(dir);
+       // ui->lb_path->adjustSize();
+        //发送信号 -> 更新当前的目录 -> 刷新文件列表
+        Q_EMIT SIG_changeDir(dir);
+    }*/
+
+    //双击之后进入游戏界面
+    //向服务器发送请求获取该游戏的介绍
+
+    //创建新页面，读取这个游戏的各种介绍信息
+    GameIntorduce* window = new GameIntorduce;
+    connect(window,SIGNAL(SIG_downloadGame(int)), this, SLOT(slot_downloadGame(int)));
+    connect(window,SIGNAL(SIG_Sendcomment(int,QString,int)),this,SLOT(slot_Sendcomment(int,QString,int)));
+    connect(window,SIGNAL(SIG_getcommentRq(int, int)),this,SLOT(slot_getcommentRq(int,int)));
+    connect(window,SIGNAL(SIG_removeIntroduce(int)),this,SLOT(slot_removeIntroduce(int)));
+    window->setGameId(item0->m_info.fileid);
+    window->setGamePath(item0->m_info.absolutePath);
+    if(m_map_id_gameInfo.count(item0->m_info.fileid) == 0){    //没有下载过时才需要重新下载
+        if(m_gameInfo.count(item0->m_info.fileid) == 0){
+            emit SIG_getGameInfoFid(item0->m_info.fileid);
+            m_gameInfo.insert(item0->m_info.fileid);
+        }
+    }
+    m_map_id_gameInfo[item0->m_info.fileid] = window;
+    emit SIG_getGameType(item0->m_info.fileid);
+    window->show();
+}
+
+
+//该函数用于加载心愿
+void MainWindow::on_pushButton_18_clicked()
+{
+
+    emit SIG_getDream(dreamNum);
+
+
+
+
+}
+
+void MainWindow::on_pb_sendDream_clicked()
+{
+    QString dreamText = ui->text_Dream->toPlainText();
+    ui->text_Dream->setText("");
+    emit SIG_SendMyDream(dreamText);
 }

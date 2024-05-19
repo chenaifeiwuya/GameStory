@@ -3,6 +3,7 @@
 MyTableWidgetItem::MyTableWidgetItem()
 {
 
+
 }
 
 void MyTableWidgetItem::slot_setInfo(FileInfo &info)
@@ -16,10 +17,11 @@ void MyTableWidgetItem::slot_setInfo(FileInfo &info)
         this->setIcon(QIcon(":/images/myimages/images/file.png"));
     }else
     {
-        this->setIcon(QIcon(":/images/myimages/images/folder.png"));
+        this->setIcon(QIcon(":/images/myimages/images/gameStore.jpg"));
     }
 
     //勾选框  未打勾
     this->setCheckState(Qt::Unchecked);
 
 }
+

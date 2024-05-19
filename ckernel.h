@@ -11,10 +11,14 @@
 #include <QString>
 #include <packdef.h>
 #include <mainwindow.h>
+#include <QDialog>
 #include "md5.h"
 #include "csqlite.h"
 #include <QDir>
 #include <QTimer>
+#include "gametype.h"
+#include <vector>
+
 
 
 
@@ -79,8 +83,42 @@ private slots:      //普通槽函数
     //获取推荐游戏请求
     void slot_getRecommendInfoRq();
 
+    void slot_downloadFoderWithFlag(int fileid, QString dir, int flag);   //带有标志位的文件夹下载
+
     //定时器显示
     void slot_show_GameInfo();
+
+    //根据当前id获取对应游戏的游戏信息文件夹的id
+    void slot_getGameInfoFid(int fileid);
+
+    //获得当前上传游戏的游戏类型信息(从键盘获取上传)
+    void slot_getGameType(char** buf,int num, int fileid, int typeNum);   //num为游戏个数
+
+    //从服务器获取指定游戏的类型
+    void slot_getGameTypeRq(int f_id);
+
+    void slot_downloadGame(int f_id);  //根据f_id来下载游戏
+
+    void slot_Sendcomment(int,QString,int);
+
+    void slot_getcommentRq(int f_id, int num);
+
+    void slot_getGamedivideRq(int type);
+
+    //通过游戏名获取游戏信息
+    void slot_getGameByName(QString);
+
+    //发送我的愿望
+    void slot_SendMyDream(QString text);
+    //获取新愿望
+        void slot_dealGetDream(int);
+
+        void slot_dealUserMind(int);
+
+
+
+
+
 
 
 
@@ -105,6 +143,7 @@ private slots:      //普通槽函数
     void slot_getRecommendGameInfo();
     void slot_writefolderId_path(int fileid, QString path);
     QString slot_getPathById(int f_id);   //通过f_id来获得文件夹的绝对路径
+    QString slot_getFolderNameById(int f_id);     //通过f_id来获得文件夹名称
 private:
     //登陆之后，初始化数据
     void InitDatabase(int id);
@@ -128,6 +167,25 @@ private slots:   //网络槽函数
     void slot_dealGetGameStoryInfo(unsigned int lSendIp, char* buf, int nlen);
     void slot_dealRecommendGameIdP(unsigned lSendIp, char* buf, int nlen);
     void slot_dealFolderTranslateOver(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealGameInfoFileId(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealGameTypeRq(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealPointRs(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealCommentRs(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealGetGameInfoByName(unsigned lSendIp, char* buf, int nlen);
+
+
+
+    void slot_dealSendDreamRs(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealGetDreamRs(unsigned lSendIp, char* buf, int nlen);
+
+    void slot_dealGetMindRs(unsigned lSendIp, char* buf,int nlen);
+
 
 
 #ifdef USE_SERVER

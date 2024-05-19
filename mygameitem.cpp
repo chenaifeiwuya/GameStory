@@ -23,11 +23,64 @@ myGameItem::myGameItem()
     this->setLayout(pLayout);
 }
 
+myGameItem::myGameItem(int flag)
+{
+    if(flag == 1){
+        pLayout = new QVBoxLayout;
+      //  pLayout->setMargin();
+        pLabel = new QLabel();
+        pLabel->setObjectName("GameIcon");
+        //pLabel->setText("this is a game");
+        pLabel->setFixedSize(100,70);
+        pLabel->setMaximumHeight(70);
+        pLabel->setMaximumWidth(100);
+        pLabel->show();
+       // pLabel->setFixedSize(100*200);
+        pLayout->addWidget(pLabel);
+        this->setLayout(pLayout);
+        this->setMaximumWidth(100);
+        this->setMaximumHeight(70);
+    }
+    else if(flag == 2)
+    {
+        pLayout = new QVBoxLayout;
+      //  pLayout->setMargin();
+        pLabel = new QLabel();
+        pLabel->setObjectName("GameIcon");
+        //pLabel->setText("this is a game");
+        pLabel->setFixedSize(500,70);
+        pLabel->setMaximumHeight(70);
+        pLabel->setMaximumWidth(500);
+        pLabel->show();
+       // pLabel->setFixedSize(100*200);
+        pLayout->addWidget(pLabel);
+        this->setLayout(pLayout);
+        this->setMaximumWidth(500);
+        this->setMaximumHeight(70);
+
+
+
+        QPixmap pixmap(":/images/myimages/images/start.png");
+        //设置QLabel背景图像为该JPG图片
+        if(pixmap.isNull())
+            return ;
+        QSize newSize=pLabel->size();
+        //QSize size(newSize.width()-10,newSize.height()-20);
+        pLabel->setPixmap(pixmap.scaled(newSize,Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        //调整控件大小以适应图片尺寸
+        pLabel->setScaledContents(true); // 如果需要，设置QLabel自动缩放内容以适应其大小
+    }
+    else if(flag == 3)
+    {
+        //显示文字
+    }
+}
+
 void myGameItem::slot_setInfo(FileInfo &info)
 {
-    /*
-    m_info = info;
 
+    m_info = info;
+/*
   //  this->setText(info.name);
 
     if(info.type != "file"){
@@ -65,7 +118,7 @@ void myGameItem::slot_setInfo(FileInfo &info)
 bool myGameItem::slot_setGameCover(int f_id, QString path)
 {
     //根据获得的路径将封面显示出来,并将对应的数据保存
-    m_info.fileid = 0;
+    m_info.fileid = f_id;
     m_info.absolutePath = path;
     this->path = path;
     QDir dir(path);
@@ -127,5 +180,39 @@ QString myGameItem::GB2312ToUtf8(const char* gbbuf )
     QTextCodec * gb2312code = QTextCodec::codecForName( "gb2312");
     //QByteArray char 类型数组的封装类 里面有很多关于转码 和 写IO的操作
     return gb2312code->toUnicode( gbbuf );// 转码对象的字符集 -> Unicode
+}
+
+void myGameItem::startLoadImg()
+{
+    timer.setInterval(2000);  //2s钟尝试一次
+    connect(&timer,&QTimer::timeout,this,&myGameItem::setGameIcon);
+    timer.start();
+}
+
+void myGameItem::setGameIcon()
+{
+    //根据获得的路径将封面显示出来,并将对应的数据保存
+    this->path = m_info.absolutePath;
+    QDir dir(path);
+    QStringList filters;
+    filters <<"*.png"<<"*.jpg";   //添加png和jpg的过滤条件
+    QStringList fileList = dir.entryList(filters, QDir::Files);
+    if(!fileList.empty())
+    {
+        path += "/";
+        path += fileList.front();
+
+        QPixmap pixmap(path);
+        //设置QLabel背景图像为该JPG图片
+        if(pixmap.isNull())
+            return;
+        QSize newSize=pLabel->size();
+        //QSize size(newSize.width()-10,newSize.height()-20);
+        pLabel->setPixmap(pixmap.scaled(newSize,Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        //调整控件大小以适应图片尺寸
+        pLabel->setScaledContents(true); // 如果需要，设置QLabel自动缩放内容以适应其大小
+        //如果加载成功，则定时器停止
+        timer.stop();
+    }
 }
 

@@ -21,7 +21,11 @@ SOURCES += \
     mainwindow.cpp \
     mygameitem.cpp \
     mytablewidgetitem.cpp \
-    gameintorduce.cpp
+    gameintorduce.cpp \
+    gametype.cpp \
+    cstarpoint.cpp \
+    comment.cpp \
+    cmind.cpp
 
 HEADERS += \
     ckernel.h \
@@ -29,12 +33,20 @@ HEADERS += \
     mainwindow.h \
     mygameitem.h \
     mytablewidgetitem.h \
-    gameintorduce.h
+    gameintorduce.h \
+    gametype.h \
+    cstarpoint.h \
+    comment.h \
+    cmind.h
 
 FORMS += \
     maindialog.ui \
     mainwindow.ui \
-    gameintorduce.ui
+    gameintorduce.ui \
+    gametype.ui \
+    cstarpoint.ui \
+    comment.ui \
+    cmind.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

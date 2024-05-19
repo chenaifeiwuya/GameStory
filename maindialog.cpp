@@ -65,11 +65,11 @@ void Maindialog::on_pb_register_register_clicked()
     //手机号是 否合法  --正则表达式
     QRegExp exp( "^1[256789][0-9]\{9\}$");
     bool res=exp.exactMatch(tel);
-    if(!res)
+    /*if(!res)
     {
         QMessageBox::about(this,"提示","手机号非法");
         return;
-    }
+    }*/
 
     //密码是否过长
     if(password.size() > 20)
@@ -115,11 +115,11 @@ void Maindialog::on_pb_login_login_clicked()
     //手机号是 否合法  --正则表达式
     QRegExp exp( "^1[256789][0-9]\{9\}$");
     bool res=exp.exactMatch(tel);
-    if(!res)
+   /* if(!res)
     {
         QMessageBox::about(this,"提示","手机号非法");
         return;
-    }
+    }*/
 
     //密码是否过长
     if(password.size() > 20)
@@ -138,7 +138,7 @@ void Maindialog::on_le_tel_register_editingFinished()
 {
     QRegExp pt("^1[3-8][0-9]{9}");  //正则类型,用于匹配手机号
     QString tel = ui->le_tel_register->text();
-    if(!pt.exactMatch(tel) || tel.size()!=11)   //整串匹配成功才能返回true，否则都返回false
+    if(/*!pt.exactMatch(tel) ||*/ tel.size()!=11)   //整串匹配成功才能返回true，否则都返回false
     {
         QMessageBox::information(this,"提示","请输入合法的手机号!",QMessageBox::Ok);
         ui->le_tel_register->setText("");
@@ -149,9 +149,60 @@ void Maindialog::on_le_tel_login_editingFinished()
 {
     QRegExp pt("^1[3-8][0-9]{9}");  //正则类型,用于匹配手机号
     QString tel = ui->le_tel_login->text();
-    if(!pt.exactMatch(tel) || tel.size()!=11)   //整串匹配成功才能返回true，否则都返回false
+    if(/*!pt.exactMatch(tel) ||*/ tel.size()!=11)   //整串匹配成功才能返回true，否则都返回false
     {
         QMessageBox::information(this,"提示","请输入合法的手机号!",QMessageBox::Ok);
         ui->le_tel_register->setText("");
     }
+}
+
+void Maindialog::on_pushButton_clicked()
+{
+
+    QString tel = ui->le_tel_register->text();
+    QString password = ui->le_password_register->text();
+    QString confirm = ui->le_confirm_register->text();
+    QString name = ui->le_name_register->text();
+    QString tempName = name;
+    //过滤
+    //查看是否输入为空
+    if(tel.isEmpty() || password.isEmpty() || confirm.isEmpty() || tempName.remove(" ").isEmpty())
+    {
+        QMessageBox::about(this,"提示","输入内容不能为空");
+    }
+    //手机号是 否合法  --正则表达式
+    //QRegExp exp( "^1[256789][0-9]\{9\}$");
+    //bool res=exp.exactMatch(tel);
+    //if(!res)
+    //{
+     //   QMessageBox::about(this,"提示","手机号非法");
+      //  return;
+    //}
+
+    if(tel.size() != 11)
+    {
+        QMessageBox::about(this,"提示","手机号非法");
+        return;
+    }
+
+    //密码是否过长
+    if(password.size() > 20)
+    {
+        QMessageBox::about(this,"提示","手机号非法");
+        return ;
+    }
+
+    //密码确认要一致
+    if(confirm != password){
+        QMessageBox::about(this,"提示","两次输入不一定");
+        return;
+    }
+    //昵称 是否过程  是否有敏感词(敏感词实现自己做)
+    if(name.size() > 10){
+        QMessageBox::about(this, "提示", "昵称过长，不能超过10" );
+        return;
+    }
+
+    //发信号
+    Q_EMIT SIG_registerCommit(tel,password,name);
 }

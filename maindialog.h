@@ -36,6 +36,8 @@ private slots:
 
     void on_le_tel_login_editingFinished();
 
+    void on_pushButton_clicked();
+
 private:
     Ui::Maindialog *ui;
 };

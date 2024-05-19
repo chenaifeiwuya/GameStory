@@ -3,6 +3,10 @@
 
 #include <QTableWidgetItem>
 #include <packdef.h>
+#include <QTimer>
+#include <QLabel>
+#include <QDir>
+#include <QVBoxLayout>
 
 class MainWindow;
 class MyTableWidgetItem : public QTableWidgetItem
