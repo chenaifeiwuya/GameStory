@@ -67,7 +67,7 @@ public:
 
     //void DownloadFolderRq(sock_fd clientfd, char *szbuf, int nlen);
 
-    void DownloadFolder(int userid,int& timestamp, sock_fd clientfd,list<string> &lstRes);
+    void DownloadFolder(int userid,int& timestamp, sock_fd clientfd,list<string> &lstRes, int flag);
 
     void DownloadFile(int userid,int& timestamp,sock_fd clientfd, list<string>& lstRes);   //此函数用于下载文件夹时调用
 
@@ -84,6 +84,28 @@ public:
     void ContinueUploadRq(sock_fd clientfd,char* szbuf,int nlen);
 
     void getRecommendGameInfo(sock_fd clientfd, char* szbuf, int nlen);
+
+    void getGamInfoDirRq(sock_fd clientfd, char* szbuf, int nlen);  //根据f_id获取对应游戏到介绍的f_id
+
+    void deal_GameType(sock_fd clientfd, char* szbuf, int nlen);    //获取对应游戏的游戏类型
+
+    void deal_GetGameType(sock_fd clientfd, char* szbuf, int nlen);   //返回对应游戏的游戏类型
+
+    void deal_downloadGame(sock_fd clientfd, char* szbuf, int nlen);   //处理游戏下载请求
+
+    void deal_Sendcomment(sock_fd clientfd, char* szbuf, int nlen);       //处理游戏评论请求
+
+    void deal_getcommentRq(sock_fd clientfd, char* szbuf, int nlen);  //处理获取游戏评论请求
+
+    void deal_getGamedivideRq(sock_fd clientfd, char* szbuf, int nlen);
+
+    void deal_getGameInfoByName(sock_fd clientfd, char* szbuf, int nlen);
+
+    void deal_getGameDream(sock_fd clientfd, char* szbuf, int nlen);
+    void deal_SendGameDreamText(sock_fd clientfd, char* szbuf, int nlen);
+
+    void deal_getUserMind(sock_fd clientfd, char* szbuf, int nlen);
+
     /*******************************************/
 
 private:

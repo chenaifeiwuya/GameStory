@@ -20,6 +20,17 @@ void CLogic::setNetPackMap()
     NetPackMap(_DEF_PACK_CONTINUE_DOWNLOAD_RQ) = &CLogic::ContinueDownloadRq;
     NetPackMap(_DEF_PACK_CONTINUE_UPLOAD_RQ) = &CLogic::ContinueUploadRq;
     NetPackMap(_DEF_GET_RECOMMEND_GAME_INFO_RQ) =&CLogic::getRecommendGameInfo;
+    NetPackMap(_DEF_GET_GAME_INFO_DIR_RQ) =&CLogic::getGamInfoDirRq;
+    NetPackMap(_DEF_UPLOAD_GAME_LABEL_RQ) =&CLogic::deal_GameType;
+    NetPackMap(_DEF_GET_GAME_TYPE_RQ) =&CLogic::deal_GetGameType;
+    NetPackMap(_DEF_GET_GAME_FILE_RQ) =&CLogic::deal_downloadGame;
+    NetPackMap(_DEF_SEND_EVALUTE_RQ) =&CLogic::deal_Sendcomment;
+    NetPackMap(_DEF_GET_GAME_EVALUTE_RQ) =&CLogic::deal_getcommentRq;
+    NetPackMap(_DEF_GET_GAME_DIVIDE_RQ) =&CLogic::deal_getGamedivideRq;
+    NetPackMap(_DEF_GET_GAME_NAME_RQ) =&CLogic::deal_getGameInfoByName;
+    NetPackMap(_DEF_SEND_GAME_DREAM_RQ) =&CLogic::deal_SendGameDreamText;
+    NetPackMap(_DEF_GET_GAME_DREAM_RQ) =&CLogic::deal_getGameDream;
+    NetPackMap(_DEF_SEND_USER_MIND_RQ) =&CLogic::deal_getUserMind;
 }
 
 #define _DEF_COUT_FUNC_    cout << "clientfd:"<< clientfd << __func__ << endl;
@@ -319,6 +330,33 @@ void CLogic::GetFileInfoRq(sock_fd clientfd, char *szbuf, int nlen)
         cout<<"select faile: "<<sqlBuf<<endl;
         return;
     }
+
+    //查询该用户获取到的游戏有哪些
+    list<string>getRes;
+    memset(sqlBuf,0,sizeof(sqlBuf));
+    sprintf(sqlBuf,"select f_id from t_user_game where u_id =%d;",rq->userid);
+    res=m_sql->SelectMysql(sqlBuf,1,getRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlBuf<<endl;
+    }
+    //逐条查询f_id对应的信息
+    int fileid = 0;
+    while(!getRes.empty())
+    {
+        memset(sqlBuf,0,sizeof(sqlBuf));
+        fileid = stoi(getRes.front());
+        sprintf(sqlBuf,"select f_id, f_name,f_size, f_uploadtime, f_type from user_file_info where f_id = %d and f_state = 1;",fileid);
+        res = m_sql->SelectMysql(sqlBuf,5,lstRes);
+        if(!res)
+        {
+            cout<<"select fail: "<<sqlBuf<<endl;
+        }
+        getRes.pop_front();
+    }
+
+
+
     if(lstRes.size() == 0)
         return;
     int count=lstRes.size()/5;  //计算有几条文件信息
@@ -330,6 +368,7 @@ void CLogic::GetFileInfoRq(sock_fd clientfd, char *szbuf, int nlen)
     rs->init();
     rs->count=count;
     strcpy(rs->dir,rq->dir);
+    std::set<int>st;
     for(int i=0;i<count;i++)
     {
         int f_id=stoi(lstRes.front());
@@ -342,6 +381,15 @@ void CLogic::GetFileInfoRq(sock_fd clientfd, char *szbuf, int nlen)
         lstRes.pop_front();
         string f_type = lstRes.front();
         lstRes.pop_front();
+
+        if(st.count(f_id) > 0)  //如果有重复的
+        {
+            i--;
+            count-=1;
+            rs->count-=1;
+            continue;
+        }
+        st.insert(f_id);
 
         rs->fileInfo[i].fileid = f_id;
         strcpy(rs->fileInfo[i].fileType,f_type.c_str());
@@ -551,6 +599,8 @@ void CLogic::AddFolderRq(sock_fd clientfd, char *szbuf, int nlen)
     rs.result = 1;
     rs.timestamp = rq->timestamp;
     rs.userid = rq->userid;
+    rs.flag = rq->flag;
+    rs.fileid = id;
     //send
     SendData(clientfd,(char*)&rs,sizeof(rs));
 }
@@ -763,6 +813,10 @@ void CLogic::DownloadFolderRq(sock_fd clientfd, char *szbuf, int nlen)
     }
     if(lstRes.size() == 0) return;
     string type=lstRes.front(); lstRes.pop_front();
+
+    string strId = lstRes.front();  lstRes.pop_front();
+    string strName = lstRes.front();
+    lstRes.push_front(strId);
         int timestamp = rq->timestamp;
     if(type == "file")
     {
@@ -772,11 +826,37 @@ void CLogic::DownloadFolderRq(sock_fd clientfd, char *szbuf, int nlen)
 
     //下载文件夹
     int fileid = stoi(lstRes.front());
-    DownloadFolder(rq->userid, timestamp,clientfd,lstRes,rq->flag);
 
+    //如果flag是2，则表示是下载游戏请求，则直接将对应的f_id以及userid写到数据库中
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    if(rq->flag == 2){
+        //首先查询是否有重复的
+        sprintf(sqlbuf,"select u_id from t_user_game where u_id=%d and f_id=%d;",rq->userid,rq->fileid);
+        list<string>lstRes;
+        res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+        if(!res)
+        {
+            cout<<"select fail: "<<sqlbuf<<endl;
+        }
+        if(lstRes.empty()){
+
+            memset(sqlbuf,0,sizeof(sqlbuf));
+            sprintf(sqlbuf,"insert into t_user_game values(%d,%d);",rq->userid,rq->fileid);
+            res = m_sql->UpdataMysql(sqlbuf);
+            if(!res)
+            {
+                cout<<"updata err: "<<sqlbuf<<endl;
+            }
+        }
+    }
+
+
+    DownloadFolder(rq->userid, timestamp,clientfd,lstRes,rq->flag);
     //文件夹传输完毕，发送一个文件夹传输完毕的信息包
+    //if(strName == "GAME_INTRODUCE_") return;
     STRU_FOLDER_TRANSLATE_OVER rq_;
     rq_.f_id = fileid;
+    rq_.flag = rq->flag;
     SendData(clientfd,(char*)&rq_,sizeof(rq_));
 
 }
@@ -794,13 +874,15 @@ void CLogic::DownloadFolder(int userid, int &timestamp, sock_fd clientfd, list<s
     {
         //判断当前是否应当发送
         //如果flag==0,return
-        if(flag == 0)
+        if(flag != 1 && flag!=5)
             return;
-        else if(flag == 1)
-        {
+    }
 
-        }
-
+    if(strName == "GAME")
+    {
+        //判断是否发送游戏内容
+        if(flag != 2)
+            return;
     }
     //发送创建文件夹请求
     STRU_FOLDER_HEADER_RQ rq;
@@ -814,8 +896,8 @@ void CLogic::DownloadFolder(int userid, int &timestamp, sock_fd clientfd, list<s
     string newdir = dir + strName+"/";
 
     //查询呢我敌人userid所有文件信息（包含type）列表3个文件21项
-    char sqlbuf[1000]="";
-    sprintf(sqlbuf,"select f_type, f_id, f_name, f_path, f_MD5, f_size, f_dir from user_file_info where u_id = %d and f_dir = '%s';",userid, newdir.c_str());
+    char sqlbuf[1000]="";                           //u_id = %d and
+    sprintf(sqlbuf,"select f_type, f_id, f_name, f_path, f_MD5, f_size, f_dir from user_file_info where  f_dir = '%s';", newdir.c_str());
     list<string> newlstRes;
     bool res= m_sql->SelectMysql(sqlbuf, 7 ,newlstRes);
     if(!res){
@@ -1131,11 +1213,11 @@ void CLogic::getRecommendGameInfo(sock_fd clientfd, char *szbuf, int nlen)
 
 
     //如果推荐的游戏为空，则先将游戏库中的游戏按顺序发送一定个数给用户
-    char sqlBuf[100];
+    char sqlBuf[1024];
     list<string>lstRes;
     /*
      * list<string>lstInfo;
-    sprintf(sqlBuf,"select f_id from t_user_file where f_dir != '/' limit 20;");
+    sprintf(sqlBuf,"select f_id from t_game_id limit 20;");
     m_sql->SelectMysql(sqlbuf,1,lstRes);
     if(!res)
     {
@@ -1144,8 +1226,8 @@ void CLogic::getRecommendGameInfo(sock_fd clientfd, char *szbuf, int nlen)
     }
     */
     //再到user_file_info中去根据f_id查询其他信息
-    memset(sqlBuf,0,100);
-    sprintf(sqlBuf,"select f_id from user_file_info where f_type='folder'  limit 20;");   //先推荐20条数据
+    memset(sqlBuf,0,1024);
+    sprintf(sqlBuf,"select f_id from t_game_id limit 20;");   //先推荐20条数据
     bool res = m_sql->SelectMysql(sqlBuf,1,lstRes);
     if(!res){
         cout<<"select fail:"<<sqlBuf<<endl;
@@ -1163,4 +1245,423 @@ void CLogic::getRecommendGameInfo(sock_fd clientfd, char *szbuf, int nlen)
 
 
 
+}
+
+void CLogic::getGamInfoDirRq(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_GET_GAME_INFO_DIR_RQ* rq = (STRU_GET_GAME_INFO_DIR_RQ*)szbuf;
+    //查询数据库
+    char sqlbuf[1024];
+    list<string>lstRes;
+    sprintf(sqlbuf,"select f_path from t_file where f_id = %d;",rq->f_id);
+    bool res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    string path;
+    if(lstRes.empty()) return;
+    path = lstRes.front(); lstRes.pop_front();
+    path += "/GAME_INTRODUCE_";
+    memset(sqlbuf,0,1024);
+    sprintf(sqlbuf,"select f_id from t_file where f_path = '%s';",path.c_str());
+    res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    if(lstRes.empty()) return;  //为空
+    int id = stoi(lstRes.front());
+    lstRes.pop_front();
+    //STRU_GET_GAME_INFO_DIR_RQ rs;
+    rq->f_id = id;
+    SendData(clientfd,szbuf,sizeof(STRU_GET_GAME_INFO_DIR_RQ));
+
+}
+
+
+
+
+void CLogic::deal_GameType(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_UPLOAD_GAME_LABEL_RQ* rq= (STRU_UPLOAD_GAME_LABEL_RQ*)szbuf;
+    //将数据存到数据库中
+    if(rq->labelNum == 0)
+    {
+        return;
+    }
+
+    char sqlbuf[1000];
+    //首先将游戏id 以及 typeNum 保存到数据库中
+    sprintf(sqlbuf,"insert into t_game_id values(%d,%d);",rq->f_id,rq->typeNum);
+    bool res = m_sql->UpdataMysql(sqlbuf);
+    if(!res)
+    {
+        cout<<"updata err: "<<sqlbuf<<endl;
+        return;
+    }
+    memset(sqlbuf,0,1000);
+    for(int i=0; i<rq->labelNum; i++)
+    {
+        //写入数据库
+        sprintf(sqlbuf,"insert into t_game_type values(%d,'%s');",rq->f_id,rq->label[i]);
+         res = m_sql->UpdataMysql(sqlbuf);
+        if(!res)   //插入失败，打印信息
+        {
+            cout<<"update fail! err sql: "<<sqlbuf<<endl;
+        }
+    }
+
+
+    memset(sqlbuf,0,sizeof(sqlbuf));
+        //将typeNum保存到数据库中去
+    //将游戏的上传者也添加到该游戏到所有者里面去
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    //首先查询是否有对应对
+    sprintf(sqlbuf,"select u_id from t_user_game where u_id=%d and f_id=%d;",rq->userid,rq->f_id);
+    list<string>lstRes;
+    res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlbuf<<endl;
+    }
+    if(lstRes.empty()){   //不存在同样的记录才插入
+        memset(sqlbuf,0,sizeof(sqlbuf));
+        sprintf(sqlbuf,"insert into t_user_game values(%d,%d);",rq->userid,rq->f_id);
+        res=m_sql->UpdataMysql(sqlbuf);
+        if(!res)
+        {
+            cout<<"updata fail: "<<sqlbuf<<endl;
+        }
+    }
+
+}
+
+
+//返回对应游戏的游戏类型
+void CLogic::deal_GetGameType(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_GET_GAME_TYPE_RQ* rq = (STRU_GET_GAME_TYPE_RQ*)szbuf;
+    //通过f_id查询游戏类型
+    char sqlbuf[100];
+    sprintf(sqlbuf,"select game_type from t_game_type where f_id=%d;",rq->f_id);
+    list<string>lstRes;
+    bool res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    if(!res)
+    {
+        cout<<"select err: "<<sqlbuf<<endl;
+        return;
+    }
+    if(lstRes.empty())
+    {
+        return;
+    }
+    const char *buf;
+    STRU_GET_GAME_TYPE_RQ m_rq;
+    string str;
+    int i=0;
+    for(i=0; i<10 && !lstRes.empty(); i++)
+    {
+        str = lstRes.front().c_str();  lstRes.pop_front();
+        buf = str.c_str();
+        memcpy(m_rq.label[i],buf,sizeof(str));
+    }
+    m_rq.labelNum = i;
+    m_rq.f_id = rq->f_id;
+    SendData(clientfd,(char*)&m_rq,sizeof(m_rq));
+}
+
+//处理游戏下载请求
+void CLogic::deal_downloadGame(sock_fd clientfd, char *szbuf, int nlen)
+{
+    /*
+    STRU_GET_GAME_FILE_RQ * rq = (STRU_GET_GAME_FILE_RQ*)szbuf;
+    char sqlbuf[1000];
+    sprintf(sqlbuf,"select f_type, f_id, f_name, f_path, f_MD5, f_size, f_dir from user_file_info where  f_id = %d;",rq->f_id);
+    list<string> lstRes;
+    bool res=m_sql->SelectMysql(sqlbuf, 7, lstRes);
+    if(!res){
+        cout<<"select fail:"<<sqlbuf<<endl;
+        return;
+    }
+    if(lstRes.size() == 0) return;
+    string type=lstRes.front(); lstRes.pop_front();
+
+    string strId = lstRes.front();  lstRes.pop_front();
+    string strName = lstRes.front();
+    lstRes.push_front(strId);
+        int timestamp = rq->timestamp;
+    if(type == "file")
+    {
+        //DownloadFile(rq->userid, timestamp,clientfd,lstRes);
+        return;
+    }
+
+    //下载文件夹
+    int fileid = stoi(lstRes.front());
+    DownloadFolder(rq->userid, timestamp,clientfd,lstRes,2);   //下载游戏
+    //文件夹传输完毕，发送一个文件夹传输完毕的信息包
+    //if(strName == "GAME_INTRODUCE_") return;
+    STRU_FOLDER_TRANSLATE_OVER rq_;
+    rq_.f_id = fileid;
+    rq_.flag = 2;    //下载游戏
+    SendData(clientfd,(char*)&rq_,sizeof(rq_));
+    */
+}
+
+
+//处理游戏评论请求
+void CLogic::deal_Sendcomment(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_SEND_EVALUTE_RQ *rq = (STRU_SEND_EVALUTE_RQ*)szbuf;
+    //首先判断该用户是否拥有该游戏，若未拥有该游戏，则返回游戏评论失败
+    char sqlbuf[1000];
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    list<string>lstRes;
+    sprintf(sqlbuf,"select * from t_user_game where u_id=%d and f_id=%d;",rq->userid,rq->f_id);
+    bool res = m_sql->SelectMysql(sqlbuf,2,lstRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlbuf<<endl;
+    }
+    //判断是否存在搜索项
+    STRU_SEND_EVALUTE_RS rs;
+    if(lstRes.empty())
+    {
+        //发送评论失败，因为未拥有该游戏
+        rs.f_id = rq->f_id;
+        rs.flag = 0;  //评论失败
+    }
+    else{
+        //再次判断是否已评论，为了防止恶意刷评论，同一个帐号对同一款游戏只能发表一次评论
+        memset(sqlbuf,0,sizeof(sqlbuf));
+        lstRes.clear();
+        sprintf(sqlbuf,"select u_id from t_game_evalution where u_id=%d and f_id=%d;",rq->userid,rq->f_id);
+        res=m_sql->SelectMysql(sqlbuf,1,lstRes);
+        if(!res)
+        {
+            cout<<"select fail: "<<sqlbuf<<endl;
+        }
+        if(lstRes.empty())   //如果未发表过评论
+        {
+           //返回评论成功
+
+            rs.f_id = rq->f_id;
+            rs.flag = 1;   //评论成功
+            //并将评论写到数据库中去
+            memset(sqlbuf,0,sizeof(sqlbuf));
+            sprintf(sqlbuf,"insert into t_game_evalution(u_id, f_id, evalution_point,evalution_cal,evalution_info) values(%d,%d,%d,'%s','%s');",\
+                    rq->userid,rq->f_id,rq->point,rq->username,rq->evalute);
+            res = m_sql->UpdataMysql(sqlbuf);
+            if(!res)
+            {
+                cout<<"updata fail: "<<sqlbuf<<endl;
+            }
+        }
+        else   //如果已发表过评论
+        {
+            rs.f_id = rq->f_id;
+            rs.flag = 2;   //表示已发表过评论
+        }
+
+    }
+    SendData(clientfd,(char*)&rs,sizeof(rs));
+}
+
+
+//获取游戏评论
+void CLogic::deal_getcommentRq(sock_fd clientfd, char *szbuf, int nlen)
+{
+    //根据f_id查询数据库得到对应游戏到评论
+    STRU_GET_GAME_EVALUTE_RQ * rq=(STRU_GET_GAME_EVALUTE_RQ*)szbuf;
+    char sqlbuf[1000];
+    list<string>lstRes;
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf,"select evalution_point,evalution_cal,evalution_info from t_game_evalution where f_id=%d limit %d, 10;",rq->f_id,rq->num);   //从已有条数开始查询10条评论
+    bool res=m_sql->SelectMysql(sqlbuf,3,lstRes);
+    if(!res)
+    {
+        cout<<"select  fail: "<<sqlbuf<<endl;
+    }
+    STRU_GET_GAME_EVALUTE_RS rs;
+    const char* buf=NULL;
+    string str;
+    int i=0;
+    while(!lstRes.empty())
+    {
+
+        str = lstRes.front(); lstRes.pop_front();
+        rs.point[i] = stoi(str);
+
+
+        str = lstRes.front(); lstRes.pop_front();
+        buf = str.c_str();
+        strcpy(rs.userName[i],buf);
+
+
+       str = lstRes.front();  lstRes.pop_front();
+       buf = str.c_str();
+       strcpy(rs.evalute[i],buf);
+       //memcpy(rs.evalute[i],buf,str.size());
+
+       i++;
+    }
+    rs.f_id = rq->f_id;
+    rs.evaluteNum = i;
+    SendData(clientfd,(char*)&rs,sizeof(rs));
+}
+
+void CLogic::deal_getGamedivideRq(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_GET_GAME_BY_GAME_TYPE_RQ *rq = (STRU_GET_GAME_BY_GAME_TYPE_RQ*)szbuf;
+    //根据类型进行查找
+    char sqlbuf[1000];
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf,"select f_id from t_game_id where (typeNum & %d)=%d;",rq->typeNum,rq->typeNum);
+    list<string> lstRes;
+    bool res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlbuf<<endl;
+    }
+    //将查询到的f_id传送给客户端
+    while(!lstRes.empty())
+    {
+        STRU_GET_GAME_INFO_DIR_RQ rq;
+        rq.flag = 4;
+        rq.f_id = stoi(lstRes.front());  lstRes.pop_front();
+        SendData(clientfd,(char*)&rq,sizeof(rq));
+    }
+
+    ;}
+
+//根据游戏名称进行搜索
+void CLogic::deal_getGameInfoByName(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_GET_GAME_BY_NAME_RQ * rq=(STRU_GET_GAME_BY_NAME_RQ*)szbuf;
+    char sqlbuf[1000];
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf, "select f_id from user_file_info where f_type='folder' and f_name LIKE '%%%s%%';", rq->gameName);
+    list<string>lstRes;
+    bool res = m_sql->SelectMysql(sqlbuf,1,lstRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlbuf<<endl;
+    }
+
+    STRU_GET_GAME_BY_NAME_RS rs;
+    rs.f_id = 0;
+    rs.findRes = 0;
+    int f_id = 0;
+    if(lstRes.empty())
+    {
+        //返回游戏名不存在
+        rs.findRes = 0;   //查找失败，不存在此游
+    }
+    else{
+        while(rs.f_id==0 && !lstRes.empty()){
+            f_id = stoi(lstRes.front()); lstRes.pop_front();
+            memset(sqlbuf,0,sizeof(sqlbuf));
+            sprintf(sqlbuf,"select f_id from t_game_id where f_id=%d;",f_id);
+            list<string> lst;
+            res=m_sql->SelectMysql(sqlbuf,1,lst);
+            if(!res)
+                {
+                cout<<"select fail: "<<sqlbuf<<endl;
+            }
+            if(!lst.empty())
+                {
+                //非空，说明存在此游戏
+                rs.findRes  = 1;
+                rs.f_id = f_id;
+            }
+        }
+    }
+    SendData(clientfd,(char*)&rs,sizeof(rs));
+
+}
+
+void CLogic::deal_getGameDream(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_GET_GAME_DREAM_RQ* rq = (STRU_GET_GAME_DREAM_RQ*)szbuf;
+    char sqlbuf[1000];  //查数据库来获取愿望
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    list<string>lstRes;
+    sprintf(sqlbuf,"select u_id,dreamText from t_dream limit %d,20;");  //每次获取20条愿望
+    bool res = m_sql->SelectMysql(sqlbuf,2,lstRes);
+    if(!res)
+    {
+        cout<<"select fail: "<<sqlbuf<<endl;
+    }
+    const char* buf = NULL;
+    list<string>lst;
+    while(!lstRes.empty())
+    {
+           STRU_GET_GAME_DREAM_RS rs;
+           rs.userid = stoi(lstRes.front());  lstRes.pop_front();
+
+           memset(sqlbuf,0,sizeof(rq));
+           sprintf(sqlbuf,"select u_name from t_user where u_id = %d;",rs.userid);
+           res = m_sql->SelectMysql(sqlbuf,1,lst);
+           if(!res)
+           {
+                cout<<"select fail: "<<sqlbuf<<endl;
+           }
+           if(!lst.empty())
+           {
+                const char* name=lst.front().c_str();  lst.pop_front();
+                strcpy(rs.Name,name);
+           }
+           buf = lstRes.front().c_str();
+           memset(rs.buf,0,sizeof(rs.buf));
+           strcpy(rs.buf,buf);
+           lstRes.pop_front();
+           SendData(clientfd,(char*)&rs,sizeof(rs));
+    }
+
+}
+
+void CLogic::deal_SendGameDreamText(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_SEND_GAME_DREAM_RQ* rq=(STRU_SEND_GAME_DREAM_RQ*)szbuf;
+    //将dream存入数据库
+    char sqlbuf[1000];
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf,"insert into t_dream(u_id,dreamText) values(%d,'%s');",rq->userid,rq->buf);
+    bool res = m_sql->UpdataMysql(sqlbuf);
+
+    //返回结果
+    STRU_SEND_GAME_DREAM_RS rs;
+    if(!res)
+    {
+        cout<<"updata fail: "<<sqlbuf<<endl;
+        rs.res = 0;
+    }
+    else {
+        rs.res = 1;
+    }
+
+    SendData(clientfd,(char*)&rs,sizeof(rs));
+
+
+}
+
+
+//用于处理用户发送的心情信息
+void CLogic::deal_getUserMind(sock_fd clientfd, char *szbuf, int nlen)
+{
+    STRU_SEND_USER_MIND_RQ* rq = (STRU_SEND_USER_MIND_RQ*)szbuf;
+    //将信息保存到数据库中
+    char sqlbuf[1000];
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf,"delete from t_user_mind where u_id = %d;",rq->userid);
+    bool res = m_sql->UpdataMysql(sqlbuf);
+    if(!res)
+    {
+        cout<<"updata fail:"<<sqlbuf<<endl;
+    }
+    memset(sqlbuf,0,sizeof(sqlbuf));
+    sprintf(sqlbuf,"insert into t_user_mind(u_id,mind) values(%d,%d);",rq->userid,rq->mind);
+     res = m_sql->UpdataMysql(sqlbuf);
+    STRU_SEND_USER_MIND_RS rs;
+    if(!res)
+    {
+        cout<<"updata sql fail: "<<sqlbuf<<endl;
+        rs.success = 0;        //失败
+    }
+    else rs.success = 1;
+
+    SendData(clientfd,(char*)&rs,sizeof(rs));
 }
